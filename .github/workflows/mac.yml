@@ -54,10 +54,16 @@ jobs:
           set -e
           bundle="ExtLibs/Xamarin/Xamarin.MacOS/bin/Release/Mission Planner.app/Contents/MonoBundle"
           app_lib="$bundle/libmono-native.dylib"
-          mdk_lib=/Library/Frameworks/Mono.framework/Versions/Current/lib/libmono-native.dylib
-          echo "app: $(lipo -archs "$app_lib")  mdk: $(lipo -archs "$mdk_lib")"
-          if ! lipo "$app_lib" -verify_arch arm64 && lipo "$mdk_lib" -verify_arch arm64; then
-            lipo "$mdk_lib" -thin arm64 -output arm64.dylib
+          echo "app: $(lipo -archs "$app_lib")"
+          src=""
+          while IFS= read -r f; do
+            archs=$(lipo -archs "$f" 2>/dev/null || true)
+            echo "candidate: $archs $f"
+            if [ -z "$src" ] && echo "$archs" | grep -qw arm64; then src="$f"; fi
+          done < <(find /Library/Frameworks/Xamarin.Mac.framework/Versions/Current /Library/Frameworks/Mono.framework/Versions/Current -name 'libmono-native*.dylib' 2>/dev/null | sort -r)
+          if ! lipo "$app_lib" -verify_arch arm64 && [ -n "$src" ]; then
+            echo "using arm64 slice from $src"
+            lipo "$src" -thin arm64 -output arm64.dylib
             lipo "$app_lib" arm64.dylib -create -output "$app_lib"
             rm -f arm64.dylib
           fi
