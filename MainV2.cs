@@ -1197,7 +1197,8 @@ namespace MissionPlanner
             MenuConnect.ForeColor = ThemeManager.TextColor;
             MenuHelp.ForeColor = ThemeManager.TextColor;
 
-            if (MONO)
+            // MainV2.MONO is not set yet when the constructor applies the theme
+            if (Program.MONO)
                 FitMenuImagesAboveText();
         }
 
