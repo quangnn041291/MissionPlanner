@@ -4666,6 +4666,8 @@ namespace MissionPlanner
                 if (e.ClickedItem == item)
                 {
                     item.BackColor = ThemeManager.ControlBGColor;
+                    // the background image set while it was unselected would hide the highlight
+                    item.BackgroundImage = null;
                 }
                 else
                 {
