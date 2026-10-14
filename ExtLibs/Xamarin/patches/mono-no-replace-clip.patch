@@ -1,8 +1,18 @@
 diff --git a/mcs/class/System.Windows.Forms/xplatuimine.cs b/mcs/class/System.Windows.Forms/xplatuimine.cs
-index 5e2854fad6..1d46af13ce 100644
+index 5e2854fad6..2bd013450a 100644
 --- a/mcs/class/System.Windows.Forms/xplatuimine.cs
 +++ b/mcs/class/System.Windows.Forms/xplatuimine.cs
-@@ -1578,7 +1578,7 @@ public override PaintEventArgs PaintEventStart(ref Message msg, IntPtr handle, b
+@@ -1567,7 +1567,8 @@ public override PaintEventArgs PaintEventStart(ref Message msg, IntPtr handle, b
+                     newcanvas.DrawPicture(raster, 0, 0);                    
+                 }
+ 
+-            newcanvas.ClipRegion(clip_region);
++            // a region clip is in device space, so it would ignore the scale and offset the window is drawn with
++            newcanvas.ClipPath(clip_region.GetBoundaryPath());
+ 
+             dc = Graphics.FromCanvas(newcanvas);
+             dc.Clip = clip_region;
+@@ -1578,7 +1579,7 @@ public override PaintEventArgs PaintEventStart(ref Message msg, IntPtr handle, b
                  {
                      var borders = Hwnd.GetBorders(frm.GetCreateParams(), null);
                      newcanvas.Discard();
