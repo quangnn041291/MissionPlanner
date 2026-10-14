@@ -1196,6 +1196,35 @@ namespace MissionPlanner
             MenuConfigTune.ForeColor = ThemeManager.TextColor;
             MenuConnect.ForeColor = ThemeManager.TextColor;
             MenuHelp.ForeColor = ThemeManager.TextColor;
+
+            if (MONO)
+                FitMenuImagesAboveText();
+        }
+
+        /// <summary>
+        /// Mono squashes a menu image that is taller than the room above its text, and pushes
+        /// it up so its top is cut off. Shrink each image to fit that room, keeping its shape.
+        /// </summary>
+        private void FitMenuImagesAboveText()
+        {
+            foreach (ToolStripItem item in MainMenu.Items)
+            {
+                if (item.Image == null || string.IsNullOrEmpty(item.Text) ||
+                    item.TextImageRelation != TextImageRelation.ImageAboveText)
+                    continue;
+
+                var image = item.Image;
+                var room = item.ContentRectangle.Height - TextRenderer.MeasureText(item.Text, item.Font).Height;
+                var scale = Math.Min((double)room / image.Height,
+                    (double)MainMenu.ImageScalingSize.Width / image.Width);
+                if (room <= 0)
+                    continue;
+
+                item.ImageScaling = ToolStripItemImageScaling.None;
+                if (scale < 1)
+                    item.Image = new Bitmap(image, Math.Max(1, (int)(image.Width * scale)),
+                        Math.Max(1, (int)(image.Height * scale)));
+            }
         }
 
         void adsb_UpdatePlanePosition(object sender, MissionPlanner.Utilities.adsb.PointLatLngAltHdg adsb)
