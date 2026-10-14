@@ -101,7 +101,7 @@ using System.Runtime.InteropServices;
 [assembly: TypeForwardedTo(typeof(WarpMode))]
 [assembly: TypeForwardedTo(typeof(WrapMode))]
 [assembly: TypeForwardedTo(typeof(Font))]
-//[assembly: TypeForwardedTo(typeof(FontConverter))]
+[assembly: TypeForwardedTo(typeof(FontConverter))]
 [assembly: TypeForwardedTo(typeof(FontFamily))]
 [assembly: TypeForwardedTo(typeof(FontStyle))]
 [assembly: TypeForwardedTo(typeof(Graphics))]
