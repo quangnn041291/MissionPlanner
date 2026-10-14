@@ -1,3 +1,36 @@
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Layout/TableLayout.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Layout/TableLayout.cs
+index 7b5a655c4d..b623181716 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Layout/TableLayout.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms.Layout/TableLayout.cs
+@@ -503,9 +503,10 @@ private void CalculateColumnRowSizes (IArrangedContainer panel, IArrangedElement
+ 				// Find the last column that isn't an Absolute SizeType, and give it
+ 				// all this free space.  (Absolute sized columns need to retain their
+ 				// absolute width if at all possible!)
+-				int col = Math.Min(settings.ColumnStyles.Count, column_widths.Length) - 1;
++				// Columns past the styles are AutoSize, as for rows below.
++				int col = column_widths.Length - 1;
+ 				for (; col >= 0; --col)
+-					if (settings.ColumnStyles[col].SizeType != SizeType.Absolute)
++					if (col >= settings.ColumnStyles.Count || settings.ColumnStyles[col].SizeType != SizeType.Absolute)
+ 						break;
+ 				if (col < 0)
+ 					col = column_widths.Length - 1;
+@@ -529,10 +530,12 @@ private void CalculateColumnRowSizes (IArrangedContainer panel, IArrangedElement
+ 			if (available_height > 0 && row_heights.Length > 0 && !measureOnly) {
+ 				// Find the last row that isn't an Absolute SizeType, and give it
+ 				// all this free space.  (Absolute sized rows need to retain their
+-				// absolute height if at all possible!)
+-				int row = Math.Min(settings.RowStyles.Count, row_heights.Length) - 1;
++				// absolute height if at all possible!) Rows past the styles are
++				// AutoSize, so the last of those takes it, as on .NET, rather than
++				// opening a gap after the last styled row.
++				int row = row_heights.Length - 1;
+ 				for (; row >= 0; --row)
+-					if (settings.RowStyles[row].SizeType != SizeType.Absolute)
++					if (row >= settings.RowStyles.Count || settings.RowStyles[row].SizeType != SizeType.Absolute)
+ 						break;
+ 				if (row < 0)
+ 					row = row_heights.Length - 1;
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs
 index ebc67a2bf1..95efdb1017 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs
