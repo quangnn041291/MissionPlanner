@@ -240,7 +240,8 @@ namespace MissionPlanner
 
             try
             {
-                if (!MainV2.Android)
+                // macOS has no libdl.so, and the app bundle already loads libSkiaSharp.dylib itself
+                if (!MainV2.Android && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
                     var file = MissionPlanner.Utilities.NativeLibrary.GetLibraryPathname("libSkiaSharp");
                     log.Info(file);
