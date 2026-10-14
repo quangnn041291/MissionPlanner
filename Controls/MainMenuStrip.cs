@@ -23,5 +23,21 @@ namespace MissionPlanner.Controls
 
             base.OnMouseDown(mea);
         }
+
+        protected override void OnMouseUp(MouseEventArgs mea)
+        {
+            // Mono's ToolStrip.OnMouseUp raises ItemClicked only while the strip holds the mouse
+            // capture, which OnMouseDown has released for a MenuStrip. The button still clicks,
+            // but ItemClicked, which highlights the selected screen, never fires. Raise it here.
+            if (Program.MONO && !Capture && mea.Button == MouseButtons.Left)
+            {
+                var item = GetItemAt(mea.Location);
+                if (item != null && item.Enabled && !(item is ToolStripDropDownItem) &&
+                    !(item is ToolStripControlHost))
+                    OnItemClicked(new ToolStripItemClickedEventArgs(item));
+            }
+
+            base.OnMouseUp(mea);
+        }
     }
 }
