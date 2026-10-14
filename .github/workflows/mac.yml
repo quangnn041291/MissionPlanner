@@ -38,6 +38,16 @@ jobs:
           }
           install_pkg https://download.mono-project.com/archive/6.12.0/macos-10-universal/MonoFramework-MDK-6.12.0.206.macos10.xamarin.universal.pkg 80b0dbfa59ba9ed76dbf1393998e6a2ed2d1ccc8f5850c7a46fbe31a2aea88d8
           install_pkg https://download.visualstudio.microsoft.com/download/pr/ceb0ea3f-4db8-46b4-8dc3-8049d27c0107/7b04843d469aae253519989fcb8e750f/xamarin.mac-9.3.0.23.pkg 9aa89a4d273e5fc246f779db5d23907c414b98b76fe51e30cb60e8ccd1199956
+      # Fixes for the ExtLibs/mono submodule (meee1/mono), kept as patches in this repo.
+      - name: Patch the mono submodule
+        shell: bash
+        run: |
+          set -e
+          for p in ExtLibs/Xamarin/patches/mono-*.patch; do
+            echo "applying $p"
+            git -C ExtLibs/mono apply --verbose "$PWD/$p"
+          done
+
       - name: Build
         shell: pwsh
         run: |

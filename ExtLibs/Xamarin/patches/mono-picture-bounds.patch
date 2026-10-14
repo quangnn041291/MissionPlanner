@@ -1,0 +1,22 @@
+diff --git a/mcs/class/System.Windows.Forms/xplatuimine.cs b/mcs/class/System.Windows.Forms/xplatuimine.cs
+index 5e2854fad6..592fe95215 100644
+--- a/mcs/class/System.Windows.Forms/xplatuimine.cs
++++ b/mcs/class/System.Windows.Forms/xplatuimine.cs
+@@ -1559,7 +1559,7 @@ public override PaintEventArgs PaintEventStart(ref Message msg, IntPtr handle, b
+ 
+             if(hwnd.pic == null)
+                 hwnd.pic = new SKPictureRecorder();
+-            var newcanvas = hwnd.pic.BeginRecording(SKRect.Empty);
++            var newcanvas = hwnd.pic.BeginRecording(new SKRect(0, 0, hwnd.width, hwnd.height));
+             if (paint_hwnd.hwndbmp != null)
+                 if (!hwnd.Invalid.Contains(hwnd.ClientRect) )// && (hwnd.ClientRect.Width != hwnd.Invalid.Width && hwnd.ClientRect.Height != hwnd.Invalid.Height))
+                 {
+@@ -1592,7 +1592,7 @@ public override PaintEventArgs PaintEventStart(ref Message msg, IntPtr handle, b
+         {
+             //dc = Graphics.FromSKImage(paint_hwnd.hwndbmpNC);//Graphics.FromHwnd(paint_hwnd.whole_window);
+             var pic = new SKPictureRecorder();
+-            var newcanvas = pic.BeginRecording(SKRect.Empty);
++            var newcanvas = pic.BeginRecording(new SKRect(0, 0, hwnd.width, hwnd.height));
+             dc = Graphics.FromCanvas(newcanvas);
+ 
+             if (!hwnd.nc_invalid.IsEmpty)
