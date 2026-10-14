@@ -74,7 +74,7 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
 
         public Region Clip {
             get { return new Region(Rectangle.FromLTRB((int)_image.LocalClipBounds.Left,(int) _image.LocalClipBounds.Top, (int)_image.LocalClipBounds.Right,(int) _image.LocalClipBounds.Bottom)); }
-            set { _image.ClipRect(value.Bounds, (SKClipOperation) 5); }
+            set { ReplaceClip(value.Bounds); }
         }
         public RectangleF ClipBounds {
             get { return new RectangleF(_image.LocalClipBounds.Left,_image.LocalClipBounds.Top,_image.LocalClipBounds.Width,_image.LocalClipBounds.Height); }
@@ -1255,9 +1255,34 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
 
         public void ResetClip()
         {
-            _image.ClipRect(SKRect.Create(0, 0, 10000, 10000), (SKClipOperation) 5); // kReplace_Op
-            //_image.RestoreToCount(-1);
-            //_image.ClipRect(SKRect.Create(0, 0, 10000, 10000), SKClipOperation.Intersect, false);
+            ReplaceClip(null);
+        }
+
+        // canvas save count from before the clip that Clip and ResetClip replace, -1 for none yet
+        private int _clipSaveCount = -1;
+
+        /// <summary>
+        /// Replace the clip, as GDI+ does. Skia dropped the kReplace clip op, and on the OpenGL
+        /// backend everything drawn after one vanished, so restore to a save taken before the
+        /// previous clip and intersect from there instead.
+        /// </summary>
+        private void ReplaceClip(SKRect? rect)
+        {
+            var canvas = _image;
+            if (_clipSaveCount < 0)
+            {
+                _clipSaveCount = canvas.Save();
+            }
+            else if (canvas.SaveCount == _clipSaveCount + 1)
+            {
+                var matrix = canvas.TotalMatrix;
+                canvas.RestoreToCount(_clipSaveCount);
+                _clipSaveCount = canvas.Save();
+                canvas.SetMatrix(matrix);
+            }
+
+            if (rect.HasValue)
+                canvas.ClipRect(rect.Value);
         }
 
         public void ResetTransform()
