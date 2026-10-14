@@ -1,0 +1,100 @@
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs
+index ebc67a2bf1..3fef42149f 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs
+@@ -148,6 +148,9 @@ public DataGridView ()
+ 			SetStyle (ControlStyles.Opaque, true);
+ 			//SetStyle (ControlStyles.UserMouse, true);
+ 			SetStyle (ControlStyles.OptimizedDoubleBuffer, true);
++
++			// on by default, as in .NET
++			showCellToolTips = true;
+ 			
+ 			adjustedTopLeftHeaderBorderStyle = new DataGridViewAdvancedBorderStyle();
+ 			adjustedTopLeftHeaderBorderStyle.All = DataGridViewAdvancedCellBorderStyle.Single;
+@@ -3720,6 +3723,13 @@ protected virtual void OnCellMouseEnter (DataGridViewCellEventArgs e)
+ 			DataGridViewCell cell = GetCellInternal (e.ColumnIndex, e.RowIndex);
+ 
+ 			cell.OnMouseEnterInternal (e.RowIndex);
++
++			// show the cell's ToolTipText after a pause, error icons have their own
++			if (showCellToolTips && e.RowIndex >= 0 && e.ColumnIndex >= 0 &&
++			    string.IsNullOrEmpty (cell.ErrorText) && !string.IsNullOrEmpty (cell.ToolTipText)) {
++				tooltip_currently_showing = cell;
++				ToolTipTimer.Start ();
++			}
+ 			
+ 			DataGridViewCellEventHandler eh = (DataGridViewCellEventHandler)(Events [CellMouseEnterEvent]);
+ 			if (eh != null)
+@@ -3731,6 +3741,9 @@ protected virtual void OnCellMouseLeave (DataGridViewCellEventArgs e)
+ 			DataGridViewCell cell = GetCellInternal (e.ColumnIndex, e.RowIndex);
+ 
+ 			cell.OnMouseLeaveInternal (e.RowIndex);
++
++			if (tooltip_currently_showing != null && string.IsNullOrEmpty (tooltip_currently_showing.ErrorText))
++				MouseLeftErrorIcon (tooltip_currently_showing);
+ 			
+ 			DataGridViewCellEventHandler eh = (DataGridViewCellEventHandler)(Events [CellMouseLeaveEvent]);
+ 			if (eh != null)
+@@ -6599,7 +6612,14 @@ private void MouseLeftErrorIcon (DataGridViewCell item)
+ 
+ 		private void ToolTipTimer_Tick (object o, EventArgs args)
+ 		{
++			if (tooltip_currently_showing == null) {
++				ToolTipTimer.Stop ();
++				return;
++			}
++
+ 			string tooltip = tooltip_currently_showing.ErrorText;
++			if (string.IsNullOrEmpty (tooltip))
++				tooltip = tooltip_currently_showing.ToolTipText;
+ 
+ 			if (!string.IsNullOrEmpty (tooltip))
+ 				ToolTipWindow.Present (this, tooltip);
+diff --git a/mcs/class/System.Windows.Forms/xplatuimine.cs b/mcs/class/System.Windows.Forms/xplatuimine.cs
+index 1be7eb6a32..5bee87d7ba 100644
+--- a/mcs/class/System.Windows.Forms/xplatuimine.cs
++++ b/mcs/class/System.Windows.Forms/xplatuimine.cs
+@@ -3729,13 +3729,36 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
+                 return IntPtr.Zero;
+             } else if (message == Msg.WM_MOUSEWHEEL)
+             {
++                // to the control under the pointer, on the topmost form that has the pointer
++                var x = lParam.ToInt32() & 0xffff;
++                var y = lParam.ToInt32() >> 16;
+ 
+-                var ctl = FindControlAtPoint(Application.OpenForms[0], new Point(mouse_position.X, mouse_position.Y));
+-                
+-                hwnd = ctl.Handle;
+-                h = Hwnd.ObjectFromHandle(ctl.Handle);
+-                if (hwnd != IntPtr.Zero)
+-                    PostMessage(hwnd, message, wParam, lParam);
++                mouse_position.X = x;
++                mouse_position.Y = y;
++
++                Control ctl = null;
++                for (var cnt = Application.OpenForms.Count; cnt > 0 && ctl == null; cnt--)
++                {
++                    var form = Application.OpenForms[cnt - 1];
++                    if (form.IsDisposed || !form.IsHandleCreated || !form.Visible)
++                        continue;
++
++                    var hwnd2 = Hwnd.ObjectFromHandle(form.Handle);
++                    if (hwnd2 == null || x < hwnd2.x || y < hwnd2.y || x > hwnd2.x + hwnd2.width ||
++                        y > hwnd2.y + hwnd2.height)
++                        continue;
++
++                    int cx = x, cy = y;
++                    ScreenToClient(form.Handle, ref cx, ref cy);
++                    ctl = FindControlAtPoint(form, new Point(cx, cy)) ?? form;
++                }
++
++                if (ctl == null || !ctl.IsHandleCreated)
++                    return IntPtr.Zero;
++
++                // controls take the wheel position relative to themselves
++                ScreenToClient(ctl.Handle, ref x, ref y);
++                PostMessage(ctl.Handle, message, wParam, (IntPtr) ((y) << 16 | (x & 0xffff)));
+                 return IntPtr.Zero;
+             }
+             else if (message == Msg.WM_CONTEXTMENU)

@@ -409,6 +409,44 @@ namespace Xamarin.GCSViews
             Marshal.FreeHGlobal(ptr);
             //.SetWindowPos(IntPtr.Zero, 0, 0, width, height);
         }
+
+        /// <summary>
+        /// The view the WinForms screen is drawn into, so the platform can map its own mouse events onto it
+        /// </summary>
+        public static VisualElement CanvasView => Instance?.SkCanvasView;
+
+        /// <summary>
+        /// Mouse moved with no button down. SKTouch only reports moves while a button is held, so hover
+        /// (tooltips, highlights) needs this from the platform. fx/fy are 0..1 across the canvas
+        /// </summary>
+        public static void MouseHover(double fx, double fy)
+        {
+            if (Instance == null || Instance.touchDictionary.Count > 0)
+                return;
+
+            var x = (int) (fx * Instance.size.Width);
+            var y = (int) (fy * Instance.size.Height);
+
+            XplatUIMine.PaintPending = true;
+            XplatUI.driver.SendMessage(IntPtr.Zero, Msg.WM_MOUSEMOVE, IntPtr.Zero, (IntPtr) ((y) << 16 | (x)));
+        }
+
+        /// <summary>
+        /// Scroll wheel or trackpad, delta in WHEEL_DELTA (120) units, positive scrolls up.
+        /// fx/fy are 0..1 across the canvas
+        /// </summary>
+        public static void MouseWheel(double fx, double fy, int delta)
+        {
+            if (Instance == null || delta == 0)
+                return;
+
+            var x = (int) (fx * Instance.size.Width);
+            var y = (int) (fy * Instance.size.Height);
+
+            XplatUIMine.PaintPending = true;
+            XplatUI.driver.SendMessage(IntPtr.Zero, Msg.WM_MOUSEWHEEL, (IntPtr) (delta << 16),
+                (IntPtr) ((y) << 16 | (x)));
+        }
         
 
         protected override void OnAppearing()

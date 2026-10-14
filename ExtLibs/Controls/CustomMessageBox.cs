@@ -98,10 +98,15 @@ namespace MissionPlanner.MsgBox
             
             SizeF sz = TextRenderer.MeasureText ("The quick brown Fox", SystemFonts.DefaultFont);
             var perchar = sz.Width / 20;
-            // convert to nice wrapped lines.
-            text = AddNewLinesToText(text, Screen.PrimaryScreen.Bounds.Width / (int)perchar);
+            // convert to nice wrapped lines. leave room for the icon and margins, and for a line running
+            // on to the end of its word, as a dialog wider than the screen gets cut to it, text and all
+            var screen = Screen.PrimaryScreen.WorkingArea;
+            text = AddNewLinesToText(text, Math.Max(20, (screen.Width - 250) / (int)perchar));
             // get pixel width and height
             Size textSize = TextRenderer.MeasureText(text, SystemFonts.DefaultFont);
+            // too tall for the screen, so scroll the text rather than run it off the bottom
+            if (textSize.Height + 120 > screen.Height)
+                label = false;
             // allow for icon
             if (icon != MessageBoxIcon.None)
                 textSize.Width += SystemIcons.Question.Width;
@@ -115,7 +120,7 @@ namespace MissionPlanner.MsgBox
                 MaximizeBox = false,
                 MinimizeBox = false,
                 Width = textSize.Width + 20,
-                Height = textSize.Height + 120,
+                Height = (label ? textSize.Height : Math.Min(textSize.Height, 490)) + 120,
                 TopMost = true,
                 AutoScaleMode = AutoScaleMode.None,
             })

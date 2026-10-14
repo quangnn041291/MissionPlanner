@@ -30,6 +30,10 @@ namespace Xamarin.MacOS
             mainWindow.DidResize += MainWindow_DidResize;
             mainWindow.WillClose += MainWindow_WillClose;
             NSEvent.AddLocalMonitorForEventsMatchingMask(NSEventMask.KeyDown, KeyboardEventHandler);
+            // SKTouch reports neither hover moves nor the scroll wheel/trackpad, forward those ourselves
+            mainWindow.AcceptsMouseMovedEvents = true;
+            NSEvent.AddLocalMonitorForEventsMatchingMask(NSEventMask.MouseMoved | NSEventMask.ScrollWheel,
+                MouseEventHandler);
 
             Test.BlueToothDevice = new BTDevice();
             Test.UsbDevices = new USBDevices();
@@ -53,6 +57,65 @@ namespace Xamarin.MacOS
             Console.WriteLine(keyEvent.KeyCode);
 
             return keyEvent;
+        }
+
+        // trackpad scrolling left over from the previous event, in points
+        private double wheelRemainder;
+
+        private NSEvent MouseEventHandler(NSEvent mouseEvent)
+        {
+            try
+            {
+                var view = WinForms.CanvasView == null
+                    ? null
+                    : global::Xamarin.Forms.Platform.MacOS.Platform.GetRenderer(WinForms.CanvasView)?.NativeView;
+                if (view == null || mouseEvent.Window != view.Window)
+                    return mouseEvent;
+
+                var point = view.ConvertPointFromView(mouseEvent.LocationInWindow, null);
+                var bounds = view.Bounds;
+                if (!bounds.Contains(point) || bounds.Width <= 0 || bounds.Height <= 0)
+                    return mouseEvent;
+
+                var fx = (double) ((point.X - bounds.X) / bounds.Width);
+                var fy = view.IsFlipped
+                    ? (double) ((point.Y - bounds.Y) / bounds.Height)
+                    : (double) ((bounds.Bottom - point.Y) / bounds.Height);
+
+                if (mouseEvent.Type == NSEventType.MouseMoved)
+                {
+                    WinForms.MouseHover(fx, fy);
+                }
+                else if (mouseEvent.Type == NSEventType.ScrollWheel)
+                {
+                    // a wheel reports lines, one notch each. a trackpad reports points, so gather those up
+                    // into notches, as the WinForms controls step a fixed amount per message
+                    int notches;
+                    var dy = (double) mouseEvent.ScrollingDeltaY;
+                    if (mouseEvent.HasPreciseScrollingDeltas)
+                    {
+                        if (mouseEvent.Phase == NSEventPhase.Began)
+                            wheelRemainder = 0;
+                        wheelRemainder += dy;
+                        notches = (int) (wheelRemainder / 30);
+                        wheelRemainder -= notches * 30;
+                    }
+                    else
+                    {
+                        notches = dy == 0 ? 0 : Math.Sign(dy) * Math.Max(1, (int) Math.Round(Math.Abs(dy)));
+                    }
+
+                    notches = Math.Max(-10, Math.Min(10, notches));
+                    for (var i = 0; i < Math.Abs(notches); i++)
+                        WinForms.MouseWheel(fx, fy, Math.Sign(notches) * 120);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+
+            return mouseEvent;
         }
 
         private void MainWindow_WillClose(object sender, EventArgs e)
