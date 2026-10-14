@@ -918,9 +918,6 @@ namespace Xamarin.GCSViews
                             {Color = SKColors.Black, Style = SKPaintStyle.Stroke, StrokeJoin = SKStrokeJoin.Miter, IsAntialias = true});
                 }
 
-                canvas.DrawText("" + DateTime.Now.ToString("HH:mm:ss.fff"),
-                    new SKPoint(10, 10), new SKPaint() {Color = SKColor.Parse("ffff00")});
-
                 canvas.Flush();
             }
             catch (Exception ex)
