@@ -29,7 +29,9 @@ namespace Xamarin.MacOS
             mainWindow.TitleVisibility = NSWindowTitleVisibility.Hidden;
             mainWindow.DidResize += MainWindow_DidResize;
             mainWindow.WillClose += MainWindow_WillClose;
-            NSEvent.AddLocalMonitorForEventsMatchingMask(NSEventMask.KeyDown, KeyboardEventHandler);
+            NSEvent.AddLocalMonitorForEventsMatchingMask(
+                NSEventMask.KeyDown | NSEventMask.KeyUp | NSEventMask.FlagsChanged, KeyboardEventHandler);
+            WinForms.DirectKeyboard = true;
             // SKTouch reports neither hover moves nor the scroll wheel/trackpad, forward those ourselves
             mainWindow.AcceptsMouseMovedEvents = true;
             NSEvent.AddLocalMonitorForEventsMatchingMask(NSEventMask.MouseMoved | NSEventMask.ScrollWheel,
@@ -52,11 +54,172 @@ namespace Xamarin.MacOS
             new System.Drawing.android.android();
         }
 
+        // command shortcuts left to macOS: quit, close, hide, minimise, preferences
+        private const string SystemShortcuts = "qwhm,";
+
+        /// <summary>
+        /// Type straight into the focused WinForms control. Command works as Control does on Windows,
+        /// and copy/cut/paste/select all go through the macOS pasteboard, as the driver has none
+        /// </summary>
         private NSEvent KeyboardEventHandler(NSEvent keyEvent)
         {
-            Console.WriteLine(keyEvent.KeyCode);
+            try
+            {
+                // leave native text fields and other windows alone
+                if (keyEvent.Window != mainWindow || mainWindow.FirstResponder is NSText)
+                    return keyEvent;
 
-            return keyEvent;
+                var flags = keyEvent.ModifierFlags;
+                var shift = flags.HasFlag(NSEventModifierMask.ShiftKeyMask);
+                var control = flags.HasFlag(NSEventModifierMask.ControlKeyMask);
+                var alt = flags.HasFlag(NSEventModifierMask.AlternateKeyMask);
+                var command = flags.HasFlag(NSEventModifierMask.CommandKeyMask);
+
+                WinForms.KeyModifiers(shift, control || command, alt);
+                if (keyEvent.Type == NSEventType.FlagsChanged)
+                    return keyEvent;
+
+                var down = keyEvent.Type == NSEventType.KeyDown;
+                var plain = keyEvent.CharactersIgnoringModifiers?.ToLowerInvariant() ?? "";
+                var key = MacKeyToKeys(keyEvent.KeyCode, plain);
+
+                if (command || control)
+                {
+                    if (command && plain.Length == 1 && SystemShortcuts.Contains(plain))
+                        return keyEvent;
+
+                    if (plain == "c" || plain == "x" || plain == "v" || plain == "a")
+                    {
+                        if (down)
+                            Shortcut(plain);
+                        return null;
+                    }
+
+                    // other shortcuts reach the app as Control+key, with nothing typed
+                    WinForms.KeyEvent(key, null, down, keyEvent.IsARepeat);
+                    return null;
+                }
+
+                WinForms.KeyEvent(key, KeyText(keyEvent), down, down && keyEvent.IsARepeat);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                return keyEvent;
+            }
+        }
+
+        private static void Shortcut(string letter)
+        {
+            var pasteboard = NSPasteboard.GeneralPasteboard;
+            switch (letter)
+            {
+                case "c":
+                case "x":
+                    var selected = WinForms.FocusedSelectedText();
+                    if (string.IsNullOrEmpty(selected))
+                        return;
+                    pasteboard.ClearContents();
+                    pasteboard.SetStringForType(selected, NSPasteboard.NSPasteboardTypeString);
+                    if (letter == "x")
+                    {
+                        // delete the selection
+                        WinForms.KeyEvent(46, null, true, false);
+                        WinForms.KeyEvent(46, null, false, false);
+                    }
+                    break;
+                case "v":
+                    var text = pasteboard.GetStringForType(NSPasteboard.NSPasteboardTypeString);
+                    WinForms.TypeText(text?.Replace("\r", ""));
+                    break;
+                case "a":
+                    WinForms.FocusedSelectAll();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// What the key types, as WM_CHAR wants it. Return, backspace and escape type their control
+        /// characters, as on Windows, the arrows and function keys type nothing
+        /// </summary>
+        private static string KeyText(NSEvent keyEvent)
+        {
+            switch (keyEvent.KeyCode)
+            {
+                case 36: // return
+                case 76: // keypad enter
+                    return "\r";
+                case 51: // backspace
+                    return "\b";
+                case 53: // escape
+                    return "\u001b";
+                case 48: // tab
+                    return null;
+            }
+
+            var text = keyEvent.Characters ?? "";
+            return new string(text.Where(c => c >= 32 && c != 127 && (c < 0xF700 || c > 0xF8FF)).ToArray());
+        }
+
+        /// <summary>
+        /// macOS virtual key code to the Windows Forms Keys code, without modifiers
+        /// </summary>
+        private static int MacKeyToKeys(ushort keyCode, string plain)
+        {
+            switch (keyCode)
+            {
+                case 36: case 76: return 13; // Enter
+                case 48: return 9; // Tab
+                case 51: return 8; // Back
+                case 117: return 46; // Delete
+                case 53: return 27; // Escape
+                case 49: return 32; // Space
+                case 123: return 37; // Left
+                case 126: return 38; // Up
+                case 124: return 39; // Right
+                case 125: return 40; // Down
+                case 116: return 33; // PageUp
+                case 121: return 34; // PageDown
+                case 119: return 35; // End
+                case 115: return 36; // Home
+                case 122: return 112; // F1
+                case 120: return 113;
+                case 99: return 114;
+                case 118: return 115;
+                case 96: return 116;
+                case 97: return 117;
+                case 98: return 118;
+                case 100: return 119;
+                case 101: return 120;
+                case 109: return 121;
+                case 103: return 122;
+                case 111: return 123; // F12
+            }
+
+            if (plain.Length == 0)
+                return 0;
+
+            var c = char.ToUpperInvariant(plain[0]);
+            if (c >= 'A' && c <= 'Z' || c >= '0' && c <= '9')
+                return c;
+
+            switch (c)
+            {
+                case ';': return 186; // OemSemicolon
+                case '=': return 187; // Oemplus
+                case ',': return 188; // Oemcomma
+                case '-': return 189; // OemMinus
+                case '.': return 190; // OemPeriod
+                case '/': return 191; // OemQuestion
+                case '`': return 192; // Oemtilde
+                case '[': return 219; // OemOpenBrackets
+                case '\\': return 220; // OemPipe
+                case ']': return 221; // OemCloseBrackets
+                case '\'': return 222; // OemQuotes
+            }
+
+            return 0;
         }
 
         // trackpad scrolling left over from the previous event, in points

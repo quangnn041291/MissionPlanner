@@ -1209,23 +1209,27 @@ namespace MissionPlanner
         private void FitMenuImagesAboveText()
         {
             foreach (ToolStripItem item in MainMenu.Items)
-            {
-                if (item.Image == null || string.IsNullOrEmpty(item.Text) ||
-                    item.TextImageRelation != TextImageRelation.ImageAboveText)
-                    continue;
+                FitMenuImageAboveText(item);
+        }
 
-                var image = item.Image;
-                var room = item.ContentRectangle.Height - TextRenderer.MeasureText(item.Text, item.Font).Height;
-                var scale = Math.Min((double)room / image.Height,
-                    (double)MainMenu.ImageScalingSize.Width / image.Width);
-                if (room <= 0)
-                    continue;
+        private void FitMenuImageAboveText(ToolStripItem item)
+        {
+            if (!Program.MONO || item.Image == null || string.IsNullOrEmpty(item.Text) ||
+                item.TextImageRelation != TextImageRelation.ImageAboveText)
+                return;
 
-                item.ImageScaling = ToolStripItemImageScaling.None;
-                if (scale < 1)
-                    item.Image = new Bitmap(image, Math.Max(1, (int)(image.Width * scale)),
-                        Math.Max(1, (int)(image.Height * scale)));
-            }
+            var image = item.Image;
+            var room = item.ContentRectangle.Height - TextRenderer.MeasureText(item.Text, item.Font).Height;
+            var scale = Math.Min((double)room / image.Height,
+                (double)MainMenu.ImageScalingSize.Width / image.Width);
+            if (room <= 0)
+                return;
+
+            item.ImageScaling = ToolStripItemImageScaling.None;
+            // keep the tag, the connect button checks it to tell which of its icons is showing
+            if (scale < 1)
+                item.Image = new Bitmap(image, Math.Max(1, (int)(image.Width * scale)),
+                    Math.Max(1, (int)(image.Height * scale))) {Tag = image.Tag};
         }
 
         void adsb_UpdatePlanePosition(object sender, MissionPlanner.Utilities.adsb.PointLatLngAltHdg adsb)
@@ -1474,6 +1478,7 @@ namespace MissionPlanner
             }
 
             this.MenuConnect.Image = global::MissionPlanner.Properties.Resources.light_connect_icon;
+            FitMenuImageAboveText(MenuConnect);
         }
 
         public void doConnect(MAVLinkInterface comPort, string portname, string baud, bool getparams = true, bool showui = true)
@@ -1879,6 +1884,7 @@ namespace MissionPlanner
 
                     // set connected icon
                     this.MenuConnect.Image = displayicons.disconnect;
+                    FitMenuImageAboveText(MenuConnect);
                 });
             }
             catch (Exception ex)
@@ -2532,6 +2538,7 @@ namespace MissionPlanner
                         {
                             this.MenuConnect.Image = displayicons.disconnect;
                             this.MenuConnect.Image.Tag = "Disconnect";
+                            FitMenuImageAboveText(MenuConnect);
                             this.MenuConnect.Text = Strings.DISCONNECTc;
                             _connectionControl.IsConnected(true);
                         });
@@ -2545,6 +2552,7 @@ namespace MissionPlanner
                         {
                             this.MenuConnect.Image = displayicons.connect;
                             this.MenuConnect.Image.Tag = "Connect";
+                            FitMenuImageAboveText(MenuConnect);
                             this.MenuConnect.Text = Strings.CONNECTc;
                             _connectionControl.IsConnected(false);
                             if (_connectionStats != null)

@@ -447,6 +447,76 @@ namespace Xamarin.GCSViews
             XplatUI.driver.SendMessage(IntPtr.Zero, Msg.WM_MOUSEWHEEL, (IntPtr) (delta << 16),
                 (IntPtr) ((y) << 16 | (x)));
         }
+
+        /// <summary>
+        /// The platform sends key presses straight to the focused control, so text boxes take typing
+        /// as it happens, rather than through the Entry popup
+        /// </summary>
+        public static bool DirectKeyboard { get; set; }
+
+        /// <summary>
+        /// Shift/Control/Alt held down
+        /// </summary>
+        public static void KeyModifiers(bool shift, bool control, bool alt)
+        {
+            XplatUIMine.ModifierKeysState = (shift ? Keys.Shift : Keys.None) | (control ? Keys.Control : Keys.None) |
+                                            (alt ? Keys.Alt : Keys.None);
+        }
+
+        /// <summary>
+        /// A key went down or up on the focused control. key is a Keys code without modifiers, or 0 when
+        /// it has none, and text is what the key types
+        /// </summary>
+        public static void KeyEvent(int key, string text, bool down, bool repeat)
+        {
+            var focus = XplatUI.driver.GetFocus();
+            if (focus == IntPtr.Zero)
+                return;
+
+            XplatUIMine.PaintPending = true;
+            if (key != 0)
+                XplatUI.driver.PostMessage(focus, down ? Msg.WM_KEYDOWN : Msg.WM_KEYUP, (IntPtr) key,
+                    (IntPtr) (down ? (repeat ? 0x40000001 : 1) : unchecked((int) 0xC0000001)));
+            if (down)
+                TypeText(text);
+        }
+
+        /// <summary>
+        /// Type the text into the focused control, as WM_CHAR does
+        /// </summary>
+        public static void TypeText(string text)
+        {
+            var focus = XplatUI.driver.GetFocus();
+            if (focus == IntPtr.Zero || string.IsNullOrEmpty(text))
+                return;
+
+            XplatUIMine.PaintPending = true;
+            foreach (var c in text)
+                XplatUI.driver.PostMessage(focus, Msg.WM_CHAR, (IntPtr) c, (IntPtr) 1);
+        }
+
+        /// <summary>
+        /// The text selected in the focused text box, for copying. The driver has no clipboard
+        /// </summary>
+        public static string FocusedSelectedText()
+        {
+            var ctl = Control.FromHandle(XplatUI.driver.GetFocus());
+            if (ctl is TextBoxBase textBox)
+                return textBox.SelectedText;
+            if (ctl is ComboBox comboBox)
+                return comboBox.SelectedText;
+            return null;
+        }
+
+        public static void FocusedSelectAll()
+        {
+            var ctl = Control.FromHandle(XplatUI.driver.GetFocus());
+            if (ctl is TextBoxBase textBox)
+                textBox.BeginInvokeIfRequired(() => textBox.SelectAll());
+            else if (ctl is ComboBox comboBox)
+                comboBox.BeginInvokeIfRequired(() => comboBox.SelectAll());
+            XplatUIMine.PaintPending = true;
+        }
         
 
         protected override void OnAppearing()
@@ -504,6 +574,10 @@ namespace Xamarin.GCSViews
             private IntPtr caretptr;
             public void SetCaretPos(CaretStruct caret, IntPtr handle, int x, int y)
             {
+                // keys go straight to the control, no popup needed
+                if (DirectKeyboard)
+                    return;
+
                 var ctl = Control.FromHandle(_focusWindow);
                 var nw = NativeWindow.FromHandle(_focusWindow);
 
@@ -922,6 +996,16 @@ namespace Xamarin.GCSViews
                             Console.WriteLine(ex);
                         }
                     }
+                }
+
+                // the driver draws no text caret of its own
+                var caret = XplatUIMine.CaretScreenBounds;
+                if (!caret.IsEmpty)
+                {
+                    var caretColor = Control.FromHandle(XplatUI.driver.GetFocus())?.ForeColor ?? System.Drawing.Color.Black;
+                    using (var caretPaint = new SKPaint {Color = new SKColor(caretColor.R, caretColor.G, caretColor.B)})
+                        canvas.DrawRect(new SKRect(caret.Left, caret.Top, caret.Left + caret.Width, caret.Bottom),
+                            caretPaint);
                 }
 
                 IEnumerable<Hwnd> menu;

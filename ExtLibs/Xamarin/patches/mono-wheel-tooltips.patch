@@ -52,10 +52,54 @@ index ebc67a2bf1..3fef42149f 100644
  			if (!string.IsNullOrEmpty (tooltip))
  				ToolTipWindow.Present (this, tooltip);
 diff --git a/mcs/class/System.Windows.Forms/xplatuimine.cs b/mcs/class/System.Windows.Forms/xplatuimine.cs
-index 1be7eb6a32..5bee87d7ba 100644
+index 1be7eb6a32..ce6a900b6b 100644
 --- a/mcs/class/System.Windows.Forms/xplatuimine.cs
 +++ b/mcs/class/System.Windows.Forms/xplatuimine.cs
-@@ -3729,13 +3729,36 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
+@@ -64,6 +64,16 @@ public override MouseButtons MouseButtons
+         get { return mouse_state; }
+     }
+ 
++    /// <summary>
++    /// Shift/Control/Alt held down, kept up to date by the platform as it forwards key events
++    /// </summary>
++    public static Keys ModifierKeysState { get; set; }
++
++    public override Keys ModifierKeys
++    {
++        get { return ModifierKeysState; }
++    }
++
+     public override Rectangle VirtualScreen
+     {
+         get
+@@ -2970,7 +2980,25 @@ public override void KillTimer(Timer timer)
+         }
+         queue.timer_list.Remove(timer);
+     }
+-    static CaretStruct	Caret;	
++    static CaretStruct	Caret;
++
++    /// <summary>
++    /// Where the text caret is, in screen coordinates, for the platform to draw as nothing here does.
++    /// Empty while it is hidden
++    /// </summary>
++    public static Rectangle CaretScreenBounds
++    {
++        get
++        {
++            if (Caret.Hwnd == IntPtr.Zero || !Caret.Visible || Hwnd.ObjectFromHandle(Caret.Hwnd) == null)
++                return Rectangle.Empty;
++
++            int x = Caret.X, y = Caret.Y;
++            GetInstance().ClientToScreen(Caret.Hwnd, ref x, ref y);
++            return new Rectangle(x, y, Math.Max(1, Caret.Width), Caret.Height);
++        }
++    }
++
+     public override void CreateCaret(IntPtr handle, int width, int height)
+     {
+         XGCValues	gc_values;
+@@ -3729,13 +3757,36 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
                  return IntPtr.Zero;
              } else if (message == Msg.WM_MOUSEWHEEL)
              {
