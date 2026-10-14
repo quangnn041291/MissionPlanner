@@ -69,6 +69,18 @@ jobs:
           fi
           for f in "$bundle"/*.dylib "$bundle/../MacOS/Mission Planner"; do echo "$(lipo -archs "$f") $(basename "$f")"; done
 
+      # Apple Silicon refuses to load arm64 code without a valid signature, and mmp edits
+      # libSkiaSharp.dylib after it was signed. Ad-hoc sign the libraries, then the app.
+      - name: Ad-hoc sign the app
+        shell: bash
+        run: |
+          set -e
+          app="ExtLibs/Xamarin/Xamarin.MacOS/bin/Release/Mission Planner.app"
+          codesign --force --sign - "$app"/Contents/MonoBundle/*.dylib
+          codesign --force --sign - "$app"
+          codesign --verify --strict --verbose=2 "$app"
+          for f in "$app"/Contents/MonoBundle/*.dylib; do codesign --verify --arch arm64 "$f"; done
+
       - name: Package
         shell: pwsh
         continue-on-error: true
