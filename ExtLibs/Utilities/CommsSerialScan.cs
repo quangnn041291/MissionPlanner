@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 
 namespace MissionPlanner.Comms
@@ -30,6 +31,13 @@ namespace MissionPlanner.Comms
             CommsSerialScan.connect = connect;
 
             string[] portlist = SerialPort.GetPortNames();
+
+            // macOS lists each serial device as both /dev/tty.* and /dev/cu.*. Scanning both opens the
+            // device twice, so one scan fails with "Resource busy", and /dev/tty is not a serial port.
+            portlist = portlist.Where(p => p != "/dev/tty" &&
+                                           !(p.StartsWith("/dev/tty.") &&
+                                             portlist.Contains("/dev/cu." + p.Substring("/dev/tty.".Length))))
+                .ToArray();
 
             foreach (var portname in portlist)
             {
@@ -100,8 +108,8 @@ namespace MissionPlanner.Comms
                                         Console.WriteLine("Found Mavlink on port {0} at {1}", port.PortName,
                                             port.BaudRate);
 
-                                        foundport = true;
                                         portinterface.Add(port);
+                                        foundport = true;
 
                                         if (connect)
                                         {

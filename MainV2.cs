@@ -1518,8 +1518,10 @@ namespace MissionPlanner
                     _connectionControl.CMB_serialport.Text = "UDPCl";
                     break;
                 case "AUTO":
-                    // do autoscan
-                    Comms.CommsSerialScan.Scan(true);
+                    // do autoscan, but connect here once the dialog has closed rather than from the
+                    // scan thread: that opens the connect dialogs on top of this modal one, and Mono
+                    // then never closes this one
+                    Comms.CommsSerialScan.Scan(false);
                     DateTime deadline = DateTime.Now.AddSeconds(50);
                     ProgressReporterDialogue prd = new ProgressReporterDialogue();
                     prd.UpdateProgressAndStatus(-1, "Waiting for ports");
@@ -1552,7 +1554,23 @@ namespace MissionPlanner
                             throw new Exception(Strings.Timeout);
                         }
                     };
+                    // shows the dialog modally, so this returns once it has closed
                     prd.RunBackgroundOperationAsync();
+
+                    if (Comms.CommsSerialScan.foundport &&
+                        Comms.CommsSerialScan.portinterface.TryPeek(out var foundPort))
+                    {
+                        MAVLinkInterface mav = new MAVLinkInterface();
+                        mav.BaseStream = foundPort;
+                        doConnect(mav, "preset", "0");
+                        Comports.Add(mav);
+
+                        try
+                        {
+                            Comports = Comports.Distinct().ToList();
+                        }
+                        catch { }
+                    }
                     return;
                 default:
                     var extraconfig = ExtraConnectionList.Any(a => a.Label == portname);
