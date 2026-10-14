@@ -824,13 +824,14 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
             var pnt = brush.ToSKPaint();
             // Find the text bounds
             var fnt = font.ToSKPaint();
-            var textBounds = MeasureString(s, font);
+            var flags = format.FormatFlags;
+            var box = layoutRectangle;
 
-            if (layoutRectangle.Width > 0 && textBounds.Width > layoutRectangle.Width)
-            {
-                s = AddNewLinesToText(s, (int) (layoutRectangle.Width / MeasureString("A", font).Width));
-                textBounds = MeasureString(s, font);
-            }
+            // wrap at words to fit the box, as GDI+ does, unless asked not to
+            if (layoutRectangle.Width > 0 && (flags & StringFormatFlags.NoWrap) == 0)
+                s = WrapText(s, fnt, layoutRectangle.Width);
+
+            var textBounds = MeasureString(s, font);
 
             if (format.Trimming == StringTrimming.EllipsisCharacter)
             {
@@ -852,7 +853,12 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
 
             if (format.LineAlignment == StringAlignment.Center) // vertical
             {
-                layoutRectangle.Y += layoutRectangle.Height / 2 - textBounds.Height / 2;
+                var offset = layoutRectangle.Height / 2 - textBounds.Height / 2;
+                // text taller than its box starts at the top, so the first lines show, as GDI's
+                // DrawText does for wrapped text
+                if (layoutRectangle.Height > 0)
+                    offset = Math.Max(0, offset);
+                layoutRectangle.Y += offset;
             }
 
             if (format.FormatFlags == StringFormatFlags.DirectionVertical)
@@ -864,13 +870,59 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
                 pnt.IsVerticalText = false;
             }
 
+            // and keep it inside the box, as GDI+ does, unless asked not to. a little slack for the
+            // ascent and descent, which the line placement below only roughly allows for
+            var clip = box.Width > 0 && box.Height > 0 && (flags & StringFormatFlags.NoClip) == 0;
+            if (clip)
+            {
+                _image.Save();
+                _image.ClipRect(new SKRect(box.Left - 1, box.Top - 2, box.Right + 1, box.Bottom + 2));
+            }
+
             var lines = s.Trim().Split('\n');
             int a=0;
             foreach (var line in lines)
             {
                 _image.DrawText(line.TrimEnd(), layoutRectangle.X, layoutRectangle.Y - 2 + (a+1) *font.Height, pnt);
                 a++;
-            }            
+            }
+
+            if (clip)
+                _image.Restore();
+        }
+
+        /// <summary>
+        /// Break the text into lines no wider than maxWidth, at spaces, keeping the line breaks it has.
+        /// A word wider than maxWidth gets a line of its own
+        /// </summary>
+        private static string WrapText(string text, SKPaint paint, float maxWidth)
+        {
+            var sb = new StringBuilder();
+            var paragraphs = text.Replace("\r\n", "\n").Split('\n');
+            for (var p = 0; p < paragraphs.Length; p++)
+            {
+                if (p > 0)
+                    sb.Append('\n');
+
+                var line = "";
+                foreach (var word in paragraphs[p].Split(' '))
+                {
+                    var candidate = line.Length == 0 ? word : line + " " + word;
+                    if (line.Length > 0 && paint.MeasureText(candidate) > maxWidth)
+                    {
+                        sb.Append(line).Append('\n');
+                        line = word;
+                    }
+                    else
+                    {
+                        line = candidate;
+                    }
+                }
+
+                sb.Append(line);
+            }
+
+            return sb.ToString();
         }
 
         public class Line
