@@ -16,6 +16,7 @@
     <I18n>west</I18n>
     <MonoBundlingExtraArgs>-v --linkskip=OpenTK-1.0 --nolink</MonoBundlingExtraArgs>
     <LinkMode>None</LinkMode>
+    <XamMacArch>x86_64,ARM64</XamMacArch>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -156,6 +157,9 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.3</Version>
+    </PackageReference>
+    <PackageReference Include="SkiaSharp">
+      <Version>2.88.8</Version>
     </PackageReference>
     <PackageReference Include="SkiaSharp.Views.Forms">
       <Version>2.80.2</Version>
