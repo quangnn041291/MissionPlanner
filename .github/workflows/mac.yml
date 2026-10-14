@@ -46,6 +46,23 @@ jobs:
           dotnet --list-sdks
           msbuild -v:m -restore  -p:Configuration=Release "ExtLibs\Xamarin\Xamarin.MacOS\Xamarin.MacOS.csproj"
 
+      # Xamarin.Mac bundles an x86_64 only libmono-native.dylib even in a universal app.
+      # Add the arm64 slice from the Mono MDK, which is the same Mono version.
+      - name: Make libmono-native universal
+        shell: bash
+        run: |
+          set -e
+          bundle="ExtLibs/Xamarin/Xamarin.MacOS/bin/Release/Mission Planner.app/Contents/MonoBundle"
+          app_lib="$bundle/libmono-native.dylib"
+          mdk_lib=/Library/Frameworks/Mono.framework/Versions/Current/lib/libmono-native.dylib
+          echo "app: $(lipo -archs "$app_lib")  mdk: $(lipo -archs "$mdk_lib")"
+          if ! lipo "$app_lib" -verify_arch arm64 && lipo "$mdk_lib" -verify_arch arm64; then
+            lipo "$mdk_lib" -thin arm64 -output arm64.dylib
+            lipo "$app_lib" arm64.dylib -create -output "$app_lib"
+            rm -f arm64.dylib
+          fi
+          for f in "$bundle"/*.dylib "$bundle/../MacOS/Mission Planner"; do echo "$(lipo -archs "$f") $(basename "$f")"; done
+
       - name: Package
         shell: pwsh
         continue-on-error: true
