@@ -1,5 +1,5 @@
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs
-index ebc67a2bf1..3fef42149f 100644
+index ebc67a2bf1..95efdb1017 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridView.cs
 @@ -148,6 +148,9 @@ public DataGridView ()
@@ -36,7 +36,92 @@ index ebc67a2bf1..3fef42149f 100644
  			
  			DataGridViewCellEventHandler eh = (DataGridViewCellEventHandler)(Events [CellMouseLeaveEvent]);
  			if (eh != null)
-@@ -6599,7 +6612,14 @@ private void MouseLeftErrorIcon (DataGridViewCell item)
+@@ -4758,11 +4771,17 @@ protected override void OnMouseWheel (MouseEventArgs e)
+ 		{
+ 			base.OnMouseWheel(e);
+ 
++			// nothing to scroll when every row fits
++			if (!verticalScrollBar.Visible)
++				return;
++
++			// stop once the last row is in view, as dragging the scroll bar does
+ 			int delta = SystemInformation.MouseWheelScrollLines * verticalScrollBar.SmallChange;
++			int maximum = Math.Max (verticalScrollBar.Minimum, verticalScrollBar.Maximum - verticalScrollBar.LargeChange + 1);
+ 			if (e.Delta < 0)
+-				verticalScrollBar.SafeValueSet (verticalScrollBar.Value + delta);
++				verticalScrollBar.SafeValueSet (Math.Min (verticalScrollBar.Value + delta, maximum));
+ 			else
+-				verticalScrollBar.SafeValueSet (verticalScrollBar.Value - delta);
++				verticalScrollBar.SafeValueSet (Math.Min (verticalScrollBar.Value, maximum) - delta);
+ 
+ 			OnVScrollBarScroll (this, new ScrollEventArgs (ScrollEventType.ThumbPosition, verticalScrollBar.Value, ScrollOrientation.VerticalScroll));
+ 		}
+@@ -4943,6 +4962,15 @@ private void RefreshScrollBars ()
+ 					horizontalScrollBar.LargeChange = largeChange;
+ 				}
+ 
++				// every row fits, so none should be scrolled out of view, as left from before
++				// rows were hidden or the grid grew
++				if (!verticalVisible && (first_row_index != 0 || verticalScrollingOffset != 0)) {
++					first_row_index = 0;
++					verticalScrollingOffset = 0;
++					verticalScrollBar.SafeValueSet (0);
++					Invalidate ();
++				}
++
+ 				if (verticalVisible) {
+ 					verticalScrollBar.Minimum = 0;
+ 					verticalScrollBar.Maximum = gridHeight;
+@@ -5926,16 +5954,15 @@ internal void OnVScrollBarScroll (object sender, ScrollEventArgs e)
+ 				return;
+ 
+ 			int top = 0;
+-			int lastTopVisibleRowIndex = Rows.Count - DisplayedRowCount (false);
++			int lastTopVisibleRowIndex = LastTopVisibleRowIndex ();
+ 
+ 			for (int index = 0; index < Rows.Count; index++) {
+ 				DataGridViewRow row = Rows[index];
+ 				if (!row.Visible)
+ 					continue;
+ 
+-				if (row.Index >= lastTopVisibleRowIndex) {
+-					first_row_index = lastTopVisibleRowIndex;
+-					OnAnyScrollBarScroll (e);
++				if (index >= lastTopVisibleRowIndex) {
++					break;
+ 				} else if (e.NewValue < top + row.Height) {
+ 					if (first_row_index != index) {
+ 						first_row_index = index;
+@@ -5950,6 +5977,28 @@ internal void OnVScrollBarScroll (object sender, ScrollEventArgs e)
+ 			OnAnyScrollBarScroll (e);
+ 		}
+ 
++		// the lowest row that can be at the top with the grid still full below it. hidden rows,
++		// such as those a filter leaves out, take no room
++		private int LastTopVisibleRowIndex ()
++		{
++			int room = ClientSize.Height - (ColumnHeadersVisible ? ColumnHeadersHeight : 0) -
++				(horizontalScrollBar.Visible ? horizontalScrollBar.Height : 0);
++			int last = -1;
++			int below = 0;
++			for (int index = Rows.Count - 1; index >= 0; index--) {
++				DataGridViewRow row = Rows.SharedRow (index);
++				if (!row.Visible)
++					continue;
++				if (last == -1)
++					last = index;
++				below += row.Height;
++				if (below > room)
++					break;
++				last = index;
++			}
++			return Math.Max (0, last);
++		}
++
+ 		private void OnAnyScrollBarScroll(ScrollEventArgs e)
+ 		{
+ 			Invalidate ();
+@@ -6599,7 +6648,14 @@ private void MouseLeftErrorIcon (DataGridViewCell item)
  
  		private void ToolTipTimer_Tick (object o, EventArgs args)
  		{
