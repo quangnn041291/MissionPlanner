@@ -1525,7 +1525,9 @@ namespace MissionPlanner
                     prd.UpdateProgressAndStatus(-1, "Waiting for ports");
                     prd.DoWork += sender =>
                     {
-                        while (Comms.CommsSerialScan.foundport == false || Comms.CommsSerialScan.run == 1)
+                        // stop once a port is found: the scan of other ports can hang, e.g. opening
+                        // a macOS Bluetooth tty, and the found port is already connecting
+                        while (Comms.CommsSerialScan.foundport == false && Comms.CommsSerialScan.run == 1)
                         {
                             System.Threading.Thread.Sleep(500);
                             Console.WriteLine("wait for port " + CommsSerialScan.foundport + " or " +
@@ -1541,6 +1543,13 @@ namespace MissionPlanner
                                 _connectionControl.IsConnected(false);
                                 throw new Exception(Strings.Timeout);
                             }
+                        }
+
+                        // every port was scanned without finding MAVLink
+                        if (!Comms.CommsSerialScan.foundport)
+                        {
+                            _connectionControl.IsConnected(false);
+                            throw new Exception(Strings.Timeout);
                         }
                     };
                     prd.RunBackgroundOperationAsync();
