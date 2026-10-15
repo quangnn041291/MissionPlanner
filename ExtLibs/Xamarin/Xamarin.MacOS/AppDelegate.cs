@@ -290,8 +290,9 @@ namespace Xamarin.MacOS
 
         private void MainWindow_DidResize(object sender, EventArgs e)
         {
+            // the frame takes in the title bar. the WinForms screen follows the size of the view it is
+            // drawn into instead, see WinForms
             Console.WriteLine("MainWindow_DidResize " + mainWindow.Frame.Size);
-            WinForms.Resize((int)mainWindow.Frame.Size.Width, (int)mainWindow.Frame.Size.Height);
         }
 
         private  NSWindow mainWindow;

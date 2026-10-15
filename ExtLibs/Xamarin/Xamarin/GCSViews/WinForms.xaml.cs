@@ -81,6 +81,21 @@ namespace Xamarin.GCSViews
 
             Console.WriteLine("Final Size " + size);
 
+            // on the Mac the screen is drawn into a window, so size it to the view it is drawn into, in
+            // points. sized to the screen, or to the window frame with its title bar, the view is scaled
+            // more down than across, which squashes the text and drops rows of pixels from it
+            if (Device.RuntimePlatform == Device.macOS)
+                SkCanvasView.SizeChanged += (sender, args) =>
+                {
+                    var width = (int) Math.Round(SkCanvasView.Width);
+                    var height = (int) Math.Round(SkCanvasView.Height);
+                    if (width <= 0 || height <= 0 || (width == (int) size.Width && height == (int) size.Height))
+                        return;
+                    Console.WriteLine("Canvas Size " + width + "x" + height);
+                    Resize(width, height);
+                    XplatUIMine.PaintPending = true;
+                };
+
             Instance = this;
             try
             {
