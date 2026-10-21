@@ -264,10 +264,17 @@ public class FormsRender
 
             });
 
+            // a child is cut off at its parent, as when a scrolled panel pushes its controls past its edge.
+            // the whole window, so the border of a form is left alone
+            Canvas.Save();
+            Canvas.ClipRect(SKRect.Create(x - hwnd.ClientRect.X, y - hwnd.ClientRect.Y, hwnd.Width, hwnd.Height));
+
             foreach (var child in children)
             {
                 DrawOntoCanvas(child.ClientWindow, Canvas, forcerender);
             }
+
+            Canvas.Restore();
         }
 
         return true;
