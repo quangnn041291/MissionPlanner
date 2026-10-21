@@ -265,9 +265,18 @@ public class FormsRender
             });
 
             // a child is cut off at its parent, as when a scrolled panel pushes its controls past its edge.
-            // the whole window, so the border of a form is left alone
+            // that is the client area of a form, so they do not draw over its title bar, but the whole
+            // window of a maximised form, as its client area is not kept to the pixel
+            var clip = SKRect.Create(x - hwnd.ClientRect.X, y - hwnd.ClientRect.Y, hwnd.Width, hwnd.Height);
+            if (hwnd.ClientWindow != hwnd.WholeWindow)
+            {
+                var form = Control.FromHandle(hwnd.ClientWindow) as Form;
+                if (form != null && form.WindowState != FormWindowState.Maximized)
+                    clip = SKRect.Create(x, y, hwnd.ClientRect.Width, hwnd.ClientRect.Height);
+            }
+
             Canvas.Save();
-            Canvas.ClipRect(SKRect.Create(x - hwnd.ClientRect.X, y - hwnd.ClientRect.Y, hwnd.Width, hwnd.Height));
+            Canvas.ClipRect(clip);
 
             foreach (var child in children)
             {
