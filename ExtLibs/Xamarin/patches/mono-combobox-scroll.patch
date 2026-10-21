@@ -1,0 +1,33 @@
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
+index 9f45f64d2a..9196210f8f 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
+@@ -2511,6 +2511,12 @@ internal void CalcListBoxArea ()
+ 
+ 					if (vscrollbar_ctrl != null)
+ 						vscrollbar_ctrl.Visible = false;
++					// everything fits, so show it from the top, not from where the list was last scrolled to
++					if (dropdown_style != ComboBoxStyle.Simple) {
++						if (vscrollbar_ctrl != null)
++							vscrollbar_ctrl.Value = 0;
++						top_item = 0;
++					}
+ 					if (dropdown_style != ComboBoxStyle.Simple)
+ 						height = owner.ItemHeight * owner.items.Count;
+ 				} else {
+@@ -2534,8 +2540,14 @@ internal void CalcListBoxArea ()
+ 					vscrollbar_ctrl.LargeChange = large;
+ 					vscrollbar_ctrl.Visible = true;
+ 
++					// always set it, so a list that is shown again, or changed under its scroll position,
++					// starts at the selected item or the top, not at wherever it was scrolled to before
+ 					int hli = HighlightedIndex;
+-					if (hli > 0) {
++					if (dropdown_style != ComboBoxStyle.Simple) {
++						hli = Math.Max (0, Math.Min (hli, vscrollbar_ctrl.Maximum - large + 1));
++						vscrollbar_ctrl.Value = hli;
++						top_item = hli;
++					} else if (hli > 0) {
+ 						hli = Math.Min (hli, vscrollbar_ctrl.Maximum);
+ 						vscrollbar_ctrl.Value = hli;
+ 					}
