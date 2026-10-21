@@ -23,7 +23,13 @@ namespace Xamarin.MacOS
         public AppDelegate()
         {
             var style = NSWindowStyle.Closable | NSWindowStyle.Resizable | NSWindowStyle.Titled;
-            var rect = new CoreGraphics.CGRect(200,200,1024,768);
+            // wide enough for the setup pages, install firmware is a thousand pixels across beside the
+            // setup menu, but no larger than the screen, and in the middle of it
+            var screen = NSScreen.MainScreen.VisibleFrame;
+            var width = Math.Min(1280, screen.Width);
+            var height = Math.Min(800, screen.Height);
+            var rect = new CoreGraphics.CGRect(screen.X + (screen.Width - width) / 2,
+                screen.Y + (screen.Height - height) / 2, width, height);
             mainWindow = new NSWindow(rect, style, NSBackingStore.Buffered, false);
             mainWindow.Title = "Mission Planner on Mac!";
             mainWindow.TitleVisibility = NSWindowTitleVisibility.Hidden;
