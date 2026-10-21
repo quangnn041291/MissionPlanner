@@ -1325,20 +1325,31 @@ namespace MissionPlanner
 
         private void PopulateSerialportList()
         {
-            _connectionControl.CMB_serialport.Items.Clear();
+            var items = new List<string> {"AUTO"};
+            items.AddRange(SerialPort.GetPortNames());
+            items.Add("TCP");
+            items.Add("UDP");
+            items.Add("UDPCl");
+            items.Add("WS");
+            items.AddRange(ExtraConnectionList.Select(a => a.Label));
 
-            _connectionControl.CMB_serialport.Items.Add("AUTO");
-            _connectionControl.CMB_serialport.Items.AddRange(SerialPort.GetPortNames());
+            // this runs as the list is dropping down. clearing it and adding back, as was done, shrinks
+            // the drop-down to nothing and grows it again an item at a time, which shows as it flicking
+            // away and back. leave it alone if nothing changed, else change it in place
+            var list = _connectionControl.CMB_serialport.Items;
+            if (list.Count == items.Count && !items.Where((item, i) => (string) list[i] != item).Any())
+                return;
 
-            _connectionControl.CMB_serialport.Items.Add("TCP");
-            _connectionControl.CMB_serialport.Items.Add("UDP");
-            _connectionControl.CMB_serialport.Items.Add("UDPCl");
-            _connectionControl.CMB_serialport.Items.Add("WS");
-
-            foreach (var item in ExtraConnectionList)
+            for (var i = 0; i < items.Count; i++)
             {
-                _connectionControl.CMB_serialport.Items.Add(item.Label);
+                if (i >= list.Count)
+                    list.Add(items[i]);
+                else if ((string) list[i] != items[i])
+                    list[i] = items[i];
             }
+
+            while (list.Count > items.Count)
+                list.RemoveAt(list.Count - 1);
         }
 
         private void MenuFlightData_Click(object sender, EventArgs e)
