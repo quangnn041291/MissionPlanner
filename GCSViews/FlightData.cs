@@ -252,6 +252,8 @@ namespace MissionPlanner.GCSViews
 
             instance = this;
 
+            this.tabControlactions.MouseDoubleClick += tabControlactions_MouseDoubleClick;
+
             this.SubMainLeft.Panel1.ControlAdded += (sender, e) => ManageLeftPanelVisibility();
             this.SubMainLeft.Panel1.ControlRemoved += (sender, e) => ManageLeftPanelVisibility();
             this.tabControlactions.ControlAdded += (sender, e) => ManageLeftPanelVisibility();
@@ -5326,6 +5328,9 @@ namespace MissionPlanner.GCSViews
                 {
                 }
             }
+
+            if (floatingTabs.ContainsKey(tabPagemessages))
+                Messagetabtimer.Start();
         }
 
         private void tabPage1_Resize(object sender, EventArgs e)
@@ -5615,6 +5620,8 @@ namespace MissionPlanner.GCSViews
                     MainV2.comPort.MAV.cs.UpdateCurrentSettings(
                         bindingSourceHud.UpdateDataSource(MainV2.comPort.MAV.cs));
                 }
+                updateFloatingTabs();
+
                 //if the tab detached wi have to update it
                 if (tabQuickDetached) MainV2.comPort.MAV.cs.UpdateCurrentSettings(bindingSourceQuickTab.UpdateDataSource(MainV2.comPort.MAV.cs));
 
@@ -6158,7 +6165,10 @@ namespace MissionPlanner.GCSViews
 
         private void tabStatus_Paint(object sender, PaintEventArgs e)
         {
-            var bmp = new Bitmap(tabStatus.DisplayRectangle.Width, tabStatus.DisplayRectangle.Height);
+            // the tab page, or the panel standing in for it when the tab is in a window of its own
+            var panel = (Panel) sender;
+
+            var bmp = new Bitmap(panel.DisplayRectangle.Width, panel.DisplayRectangle.Height);
             var g = Graphics.FromImage(bmp);
             g.Clear(Color.Transparent);
 
@@ -6167,7 +6177,7 @@ namespace MissionPlanner.GCSViews
 
             var list = MainV2.comPort.MAV.cs.GetItemList(true);
             var cs = bindingSourceStatusTab.Current as CurrentState;
-            var br = new SolidBrush(tabStatus.ForeColor);
+            var br = new SolidBrush(panel.ForeColor);
 
             foreach (var field in list)
             {
@@ -6180,23 +6190,23 @@ namespace MissionPlanner.GCSViews
                 x += 0;
                 y += 15;
 
-                if (y > tabStatus.Height - 30)
+                if (y > panel.Height - 30)
                 {
                     x += 190;
                     y = 10;
                 }
             }
 
-            if (tabStatus.AutoScrollMinSize.Width < x)
+            if (panel.AutoScrollMinSize.Width < x)
             {
                 typeof(Panel).InvokeMember("DoubleBuffered", BindingFlags.SetProperty
                                                              | BindingFlags.Instance | BindingFlags.NonPublic, null,
-                    tabStatus, new object[] { true });
+                    panel, new object[] { true });
 
-                tabStatus.AutoScrollMinSize = new Size(x + 164, 0);
+                panel.AutoScrollMinSize = new Size(x + 164, 0);
             }
-            e.Graphics.TranslateTransform(tabStatus.AutoScrollPosition.X,
-                tabStatus.AutoScrollPosition.Y);
+            e.Graphics.TranslateTransform(panel.AutoScrollPosition.X,
+                panel.AutoScrollPosition.Y);
             e.Graphics.DrawImageUnscaled(bmp, 0, 0);
         }
 
@@ -6282,6 +6292,216 @@ namespace MissionPlanner.GCSViews
             dropout.Show();
             tabQuickDetached = true;
             (sender as ToolStripMenuItem).Visible = false;
+        }
+
+        // a tab shown in a window of its own: the window, the panel inside it that stands in for the tab page,
+        // and the controls taken from the page to put back when the window closes
+        private class FloatingTab
+        {
+            public Form Window;
+            public Panel Host;
+            public Control[] Controls;
+        }
+
+        private readonly Dictionary<TabPage, FloatingTab> floatingTabs = new Dictionary<TabPage, FloatingTab>();
+
+        private void tabControlactions_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left)
+                return;
+
+            for (int i = 0; i < tabControlactions.TabCount; i++)
+            {
+                if (tabControlactions.GetTabRect(i).Contains(e.Location))
+                {
+                    FloatTab(tabControlactions.TabPages[i]);
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Show the contents of a tab in a window of its own, as big as it needs to show all of it
+        /// if the screen has the room
+        /// </summary>
+        private void FloatTab(TabPage page)
+        {
+            FloatingTab floating;
+            if (floatingTabs.TryGetValue(page, out floating))
+            {
+                floating.Window.WindowState = FormWindowState.Normal;
+                floating.Window.Activate();
+                return;
+            }
+
+            Rectangle work;
+            try
+            {
+                work = Screen.FromControl(this).WorkingArea;
+            }
+            catch
+            {
+                work = Screen.PrimaryScreen.WorkingArea;
+            }
+
+            floating = new FloatingTab();
+            floating.Host = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = page.BackColor,
+                ForeColor = page.ForeColor,
+                AutoScroll = page.AutoScroll,
+                AutoScrollMargin = page.AutoScrollMargin,
+                AutoScrollMinSize = page.AutoScrollMinSize
+            };
+
+            Size size;
+            if (page == tabStatus)
+            {
+                // drawn rather than made of controls, wrapping to a new column when it runs out of height
+                floating.Controls = new Control[0];
+                floating.Host.Paint += tabStatus_Paint;
+                size = StatusTabSize(work);
+            }
+            else
+            {
+                floating.Controls = page.Controls.Cast<Control>().ToArray();
+                size = FloatedTabSize(page, floating.Controls, work);
+            }
+
+            floating.Window = new Form
+            {
+                Text = page.Text,
+                ShowInTaskbar = false,
+                StartPosition = FormStartPosition.CenterScreen,
+                ClientSize = size
+            };
+
+            // the page keeps a note of where its contents went
+            var hint = new Label
+            {
+                Name = "floatingTabHint",
+                Text = "Shown in its own window",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+
+            floating.Host.Controls.AddRange(floating.Controls);
+            floating.Window.Controls.Add(floating.Host);
+            page.Controls.Add(hint);
+
+            // pages that lay themselves out when they are resized need to hear it from the window too
+            floating.Host.Resize += (s, e) =>
+            {
+                if (page == tabGauges)
+                    tabPage1_Resize(floating.Host, e);
+            };
+
+            floating.Window.FormClosed += (s, e) => DockFloatedTab(page);
+
+            floatingTabs[page] = floating;
+
+            ThemeManager.ApplyThemeTo(floating.Window);
+
+            if (page == tabPagemessages)
+                Messagetabtimer.Start();
+
+            floating.Window.Show();
+        }
+
+        private void DockFloatedTab(TabPage page)
+        {
+            FloatingTab floating;
+            if (!floatingTabs.TryGetValue(page, out floating))
+                return;
+
+            floatingTabs.Remove(page);
+
+            if (IsDisposed || page.IsDisposed)
+                return;
+
+            try
+            {
+                foreach (var hint in page.Controls.Find("floatingTabHint", false))
+                {
+                    page.Controls.Remove(hint);
+                    hint.Dispose();
+                }
+
+                page.Controls.AddRange(floating.Controls);
+
+                if (page == tabPagemessages && tabControlactions.SelectedTab != tabPagemessages)
+                    Messagetabtimer.Stop();
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex);
+            }
+        }
+
+        // the status tab shows a row of 15 pixels per item, a column at a time
+        private Size StatusTabSize(Rectangle work)
+        {
+            int count = MainV2.comPort.MAV.cs.GetItemList(true).Count;
+
+            int maxheight = work.Height * 9 / 10 - 40;
+            int height = Math.Min(count * 15 + 50, maxheight);
+            int rows = Math.Max(1, (height - 40) / 15);
+            int columns = (count + rows - 1) / rows;
+
+            return new Size(Math.Min(columns * 190 + 30, work.Width * 9 / 10), height);
+        }
+
+        // what the controls of a tab take up, so the window does not need scrolling when the screen has room
+        private Size FloatedTabSize(TabPage page, Control[] controls, Rectangle work)
+        {
+            int width = Math.Max(page.ClientSize.Width, 360);
+            int height = Math.Max(page.ClientSize.Height, 260);
+
+            foreach (var control in controls)
+            {
+                Size need;
+                var text = control as TextBoxBase;
+                if (text != null)
+                    need = TextRenderer.MeasureText(text.Text, text.Font) + new Size(30, 20);
+                else if (control.Dock != DockStyle.None || control is TableLayoutPanel ||
+                         control is FlowLayoutPanel)
+                    need = control.GetPreferredSize(new Size(work.Width * 9 / 10, 0));
+                else
+                    need = new Size(control.Right + 10, control.Bottom + 10);
+
+                width = Math.Max(width, need.Width);
+                height = Math.Max(height, need.Height);
+            }
+
+            width = Math.Max(width, page.AutoScrollMinSize.Width);
+            height = Math.Max(height, page.AutoScrollMinSize.Height);
+
+            return new Size(Math.Min(width, work.Width * 9 / 10), Math.Min(height, work.Height * 9 / 10 - 40));
+        }
+
+        // the tabs in windows are not the selected tab, so nothing else keeps their data current
+        private void updateFloatingTabs()
+        {
+            foreach (var page in floatingTabs.Keys.ToArray())
+            {
+                BindingSource source = null;
+
+                if (page == tabStatus)
+                    source = bindingSourceStatusTab;
+                else if (page == tabQuick)
+                    source = bindingSourceQuickTab;
+                else if (page == tabGauges || page == tabPagePreFlight)
+                    source = bindingSourceGaugesTab;
+                else if (page == tabPayload)
+                    source = bindingSourcePayloadTab;
+
+                if (source != null && tabControlactions.SelectedTab != page)
+                    MainV2.comPort.MAV.cs.UpdateCurrentSettings(source.UpdateDataSource(MainV2.comPort.MAV.cs));
+
+                if (page == tabStatus)
+                    floatingTabs[page].Host.Invalidate();
+            }
         }
 
         void dropoutQuick_FormClosed(object sender, FormClosedEventArgs e)
