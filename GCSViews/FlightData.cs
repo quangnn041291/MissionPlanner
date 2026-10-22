@@ -6378,7 +6378,7 @@ namespace MissionPlanner.GCSViews
             };
 
             // the page keeps a note of where its contents went
-            var hint = new Label
+            var hint = new System.Windows.Forms.Label
             {
                 Name = "floatingTabHint",
                 Text = "Shown in its own window",
