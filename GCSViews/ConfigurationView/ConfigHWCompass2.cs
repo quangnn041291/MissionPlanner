@@ -14,6 +14,8 @@ namespace MissionPlanner.GCSViews.ConfigurationView
     {
         private List<CompassDeviceInfo> list;
 
+        private BindingSource bs;
+
         private bool rebootrequired = false;
 
         private List<MAVLink.MAVLinkMessage> mprog = new List<MAVLink.MAVLinkMessage>();
@@ -114,7 +116,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             // insert prios at the top
             list.InsertRange(0, prio);
 
-            var bs = new BindingSource();
+            bs = new BindingSource();
             bs.DataSource = list;
             myDataGridView1.DataSource = bs;
 
@@ -204,60 +206,29 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
         private async Task UpdateFirst3()
         {
-            if (myDataGridView1.Rows.Count >= 1)
+            // write the priorities from the list itself, not the grid rows, the grid can lag
+            // behind the list (Mono does not remove bound items when a row is removed)
+            for (int i = 0; i < 3; i++)
             {
-                list[0]._index = 0;
-                bool p1 = await MainV2.comPort.setParamAsync(MainV2.comPort.sysidcurrent,
-                    (byte)MainV2.comPort.compidcurrent,
-                    "COMPASS_PRIO1_ID",
-                    int.Parse(myDataGridView1.Rows[0].Cells[devIDDataGridViewTextBoxColumn.Index].Value.ToString()));
+                var devid = 0;
+                if (i < list.Count)
+                {
+                    list[i]._index = i;
+                    devid = list[i].DevID;
+                }
 
-                if (!p1)
+                bool ok = await MainV2.comPort.setParamAsync(MainV2.comPort.sysidcurrent,
+                    (byte)MainV2.comPort.compidcurrent,
+                    "COMPASS_PRIO" + (i + 1) + "_ID",
+                    devid);
+
+                if (!ok)
                     CustomMessageBox.Show(Strings.ErrorSettingParameter, Strings.ERROR);
-            }
-
-            if (myDataGridView1.Rows.Count >= 2)
-            {
-                list[1]._index = 1;
-                bool p2 = await MainV2.comPort.setParamAsync(MainV2.comPort.sysidcurrent,
-                    (byte)MainV2.comPort.compidcurrent,
-                    "COMPASS_PRIO2_ID",
-                    int.Parse(myDataGridView1.Rows[1].Cells[devIDDataGridViewTextBoxColumn.Index].Value.ToString()));
-
-                if (!p2)
-                    CustomMessageBox.Show(Strings.ErrorSettingParameter, Strings.ERROR);
-            }
-            else
-            {
-                // clear it
-                await MainV2.comPort.setParamAsync(MainV2.comPort.sysidcurrent,
-                    (byte)MainV2.comPort.compidcurrent,
-                    "COMPASS_PRIO2_ID",
-                    0);
-            }
-
-            if (myDataGridView1.Rows.Count >= 3)
-            {
-                list[2]._index = 2;
-                bool p3 = await MainV2.comPort.setParamAsync(MainV2.comPort.sysidcurrent,
-                    (byte)MainV2.comPort.compidcurrent,
-                    "COMPASS_PRIO3_ID",
-                    int.Parse(myDataGridView1.Rows[2].Cells[devIDDataGridViewTextBoxColumn.Index].Value.ToString()));
-
-                if (!p3)
-                    CustomMessageBox.Show(Strings.ErrorSettingParameter, Strings.ERROR);
-            }
-            else
-            {
-                //clear it
-                await MainV2.comPort.setParamAsync(MainV2.comPort.sysidcurrent,
-                    (byte)MainV2.comPort.compidcurrent,
-                    "COMPASS_PRIO3_ID",
-                    0);
             }
 
             rebootrequired = true;
 
+            bs.ResetBindings(false);
             myDataGridView1.Invalidate();
         }
 
@@ -518,15 +489,9 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
         private async void but_missing_ClickAsync(object sender, EventArgs e)
         {
-            foreach (DataGridViewRow dataGridViewRow in myDataGridView1.Rows)
-            {
-                if (dataGridViewRow.Cells[Missing.Index].Value.Equals(true))
-                {
-                    myDataGridView1.Rows.Remove(dataGridViewRow);
-                    but_missing_ClickAsync(null, null);
-                    return;
-                }
-            }
+            // remove only the missing compasses from the list, then rewrite the priorities from what is left
+            if (list.RemoveAll(a => a.Missing) == 0)
+                return;
 
             await UpdateFirst3();
         }
