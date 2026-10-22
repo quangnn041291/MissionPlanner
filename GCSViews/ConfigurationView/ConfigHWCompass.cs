@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace MissionPlanner.GCSViews.ConfigurationView
@@ -252,6 +253,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         public void Deactivate()
         {
             timer1.Stop();
+            magcal.Stop();
         }
 
         private void BUT_MagCalibration_Click(object sender, EventArgs e)
@@ -417,196 +419,162 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
         }
 
-        private List<MAVLink.MAVLinkMessage> mprog = new List<MAVLink.MAVLinkMessage>();
-        private List<MAVLink.MAVLinkMessage> mrep = new List<MAVLink.MAVLinkMessage>();
-
-        private bool ReceviedPacket(MAVLink.MAVLinkMessage packet)
-        {
-            if (System.Diagnostics.Debugger.IsAttached)
-                MainV2.comPort.DebugPacket(packet, true);
-
-            if (packet.msgid == (byte)MAVLink.MAVLINK_MSG_ID.MAG_CAL_PROGRESS)
-            {
-                lock (this.mprog)
-                {
-                    this.mprog.Add(packet);
-                }
-
-                return true;
-            }
-            else if (packet.msgid == (byte)MAVLink.MAVLINK_MSG_ID.MAG_CAL_REPORT)
-            {
-                lock (this.mrep)
-                {
-                    this.mrep.Add(packet);
-                }
-
-                return true;
-            }
-
-            return true;
-        }
-
-        private int packetsub1;
-        private int packetsub2;
+        private MagCalMonitor magcal = new MagCalMonitor();
 
         private void BUT_OBmagcalstart_Click(object sender, EventArgs e)
         {
+            ResetMagCalDisplay();
+            magcal.Start();
+
             try
             {
-                MainV2.comPort.doCommand(MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent, MAVLink.MAV_CMD.DO_START_MAG_CAL, 0, 1, 1, 0, 0, 0, 0);
+                if (!MainV2.comPort.doCommand(MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent, MAVLink.MAV_CMD.DO_START_MAG_CAL, 0, 1, 1, 0, 0, 0, 0))
+                {
+                    magcal.Stop();
+                    var autopilot = magcal.Messages;
+                    CustomMessageBox.Show("The autopilot refused to start MAG CAL" +
+                                          (autopilot.Count > 0 ? ":\n" + string.Join("\n", autopilot) : ", check it is disarmed."), Strings.ERROR);
+                    return;
+                }
             }
             catch (Exception ex)
             {
+                magcal.Stop();
                 this.LogError(ex);
                 CustomMessageBox.Show("Failed to start MAG CAL, check the autopilot is still responding.\n" + ex.ToString(), Strings.ERROR);
                 return;
             }
-
-            mprog.Clear();
-            mrep.Clear();
-            horizontalProgressBar1.Value = 0;
-            horizontalProgressBar2.Value = 0;
-            horizontalProgressBar3.Value = 0;
-
-            packetsub1 = MainV2.comPort.SubscribeToPacketType(MAVLink.MAVLINK_MSG_ID.MAG_CAL_PROGRESS, ReceviedPacket, MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent);
-            packetsub2 = MainV2.comPort.SubscribeToPacketType(MAVLink.MAVLINK_MSG_ID.MAG_CAL_REPORT, ReceviedPacket, MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent);
 
             BUT_OBmagcalaccept.Enabled = true;
             BUT_OBmagcalcancel.Enabled = true;
             timer1.Start();
         }
 
+        private void ResetMagCalDisplay()
+        {
+            lbl_obmagresult.Clear();
+            horizontalProgressBar1.Value = 0;
+            horizontalProgressBar2.Value = 0;
+            horizontalProgressBar3.Value = 0;
+        }
+
+        private void StopMagCal()
+        {
+            magcal.Stop();
+            timer1.Stop();
+            BUT_OBmagcalaccept.Enabled = false;
+            BUT_OBmagcalcancel.Enabled = false;
+        }
+
         private void BUT_OBmagcalaccept_Click(object sender, EventArgs e)
         {
             try
             {
-                MainV2.comPort.doCommand(MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent, MAVLink.MAV_CMD.DO_ACCEPT_MAG_CAL, 0, 0, 1, 0, 0, 0, 0);
-
+                if (!MainV2.comPort.doCommand(MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent, MAVLink.MAV_CMD.DO_ACCEPT_MAG_CAL, 0, 0, 1, 0, 0, 0, 0))
+                {
+                    CustomMessageBox.Show("The autopilot did not accept the calibration, it may not have finished yet.", Strings.ERROR);
+                    return;
+                }
             }
             catch (Exception ex)
             {
                 CustomMessageBox.Show(ex.ToString(), Strings.ERROR, MessageBoxButtons.OK);
+                return;
             }
 
-            MainV2.comPort.UnSubscribeToPacketType(packetsub1);
-            MainV2.comPort.UnSubscribeToPacketType(packetsub2);
-
-            timer1.Stop();
+            StopMagCal();
+            lbl_obmagresult.AppendText("Calibration accepted, please reboot the autopilot\r\n");
         }
 
         private void BUT_OBmagcalcancel_Click(object sender, EventArgs e)
         {
             try
             {
-                MainV2.comPort.doCommand(MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent, MAVLink.MAV_CMD.DO_CANCEL_MAG_CAL, 0, 0, 1, 0, 0, 0, 0);
+                if (!MainV2.comPort.doCommand(MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent, MAVLink.MAV_CMD.DO_CANCEL_MAG_CAL, 0, 0, 1, 0, 0, 0, 0))
+                {
+                    CustomMessageBox.Show("The autopilot did not accept the cancel, the calibration may still be running.", Strings.ERROR);
+                    return;
+                }
             }
             catch (Exception ex)
             {
-                CustomMessageBox.Show(ex.ToString(), Strings.ERROR, MessageBoxButtons.OK);
+                CustomMessageBox.Show("Failed to cancel MAG CAL, check the autopilot is still responding.\n" + ex.ToString(), Strings.ERROR);
+                return;
             }
 
-            MainV2.comPort.UnSubscribeToPacketType(packetsub1);
-            MainV2.comPort.UnSubscribeToPacketType(packetsub2);
-
-            timer1.Stop();
+            StopMagCal();
+            ResetMagCalDisplay();
+            lbl_obmagresult.AppendText("Calibration cancelled\r\n");
         }
 
         private void timer1_Tick(object sender, EventArgs e)
         {
+            var progress = magcal.Progress;
+            var reports = magcal.Reports;
+
             lbl_obmagresult.Clear();
-            int compasscount = 0;
-            int completecount = 0;
-            lock (mprog)
+
+            // message for user
+            string message = "";
+            foreach (var obj in progress.OrderBy(a => a.compass_id))
             {
-                // somewhere to save our %
-                Dictionary<byte, MAVLink.MAVLinkMessage> status = new Dictionary<byte, MAVLink.MAVLinkMessage>();
-                foreach (var item in mprog)
+                try
                 {
-                    status[((MAVLink.mavlink_mag_cal_progress_t)item.data).compass_id] = item;
+                    if (obj.compass_id == 0)
+                        horizontalProgressBar1.Value = obj.completion_pct;
+                    if (obj.compass_id == 1)
+                        horizontalProgressBar2.Value = obj.completion_pct;
+                    if (obj.compass_id == 2)
+                        horizontalProgressBar3.Value = obj.completion_pct;
+                }
+                catch { }
+
+                message += "id:" + obj.compass_id + " " + obj.completion_pct.ToString() + "% ";
+            }
+            lbl_obmagresult.AppendText(message + "\r\n");
+
+            foreach (var obj in reports.OrderBy(a => a.compass_id))
+            {
+                var failed = MagCalMonitor.IsFailed(obj);
+
+                lbl_obmagresult.AppendText("id:" + obj.compass_id + " x:" + obj.ofs_x.ToString("0.0") + " y:" +
+                                           obj.ofs_y.ToString("0.0") + " z:" +
+                                           obj.ofs_z.ToString("0.0") + " fit:" + obj.fitness.ToString("0.0") + " " +
+                                           (MAVLink.MAG_CAL_STATUS)obj.cal_status + "\r\n");
+
+                if (failed)
+                    lbl_obmagresult.AppendText("  " + MagCalMonitor.Describe(obj) + "\r\n");
+
+                try
+                {
+                    if (!failed && obj.compass_id == 0)
+                        horizontalProgressBar1.Value = 100;
+                    if (!failed && obj.compass_id == 1)
+                        horizontalProgressBar2.Value = 100;
+                    if (!failed && obj.compass_id == 2)
+                        horizontalProgressBar3.Value = 100;
+                }
+                catch
+                {
                 }
 
-                // message for user
-                string message = "";
-                foreach (var item in status)
-                {
-                    var obj = (MAVLink.mavlink_mag_cal_progress_t)item.Value.data;
-
-                    try
-                    {
-                        if (item.Key == 0)
-                            horizontalProgressBar1.Value = obj.completion_pct;
-                        if (item.Key == 1)
-                            horizontalProgressBar2.Value = obj.completion_pct;
-                        if (item.Key == 2)
-                            horizontalProgressBar3.Value = obj.completion_pct;
-                    }
-                    catch { }
-
-                    message += "id:" + item.Key + " " + obj.completion_pct.ToString() + "% ";
-                    compasscount++;
-                }
-                lbl_obmagresult.AppendText(message + "\n");
+                if (failed || obj.autosaved == 1)
+                    timer1.Interval = 1000;
             }
 
-            lock (mrep)
+            foreach (var text in magcal.Messages)
+                lbl_obmagresult.AppendText(text + "\r\n");
+
+            if (MagCalMonitor.IsComplete(progress, reports))
             {
-                // somewhere to save our answer
-                Dictionary<byte, MAVLink.MAVLinkMessage> status = new Dictionary<byte, MAVLink.MAVLinkMessage>();
-                foreach (var item in mrep)
-                {
-                    var obj = (MAVLink.mavlink_mag_cal_report_t)item.data;
+                StopMagCal();
 
-                    if (obj.compass_id == 0 && obj.ofs_x == 0)
-                        continue;
-
-                    status[obj.compass_id] = item;
-                }
-
-                // message for user
-                foreach (var item in status.Values)
-                {
-                    var obj = (MAVLink.mavlink_mag_cal_report_t)item.data;
-
-                    lbl_obmagresult.AppendText("id:" + obj.compass_id + " x:" + obj.ofs_x.ToString("0.0") + " y:" +
-                                               obj.ofs_y.ToString("0.0") + " z:" +
-                                               obj.ofs_z.ToString("0.0") + " fit:" + obj.fitness.ToString("0.0") + " " +
-                                               (MAVLink.MAG_CAL_STATUS)obj.cal_status + "\n");
-
-                    try
-                    {
-                        if (obj.compass_id == 0)
-                            horizontalProgressBar1.Value = 100;
-                        if (obj.compass_id == 1)
-                            horizontalProgressBar2.Value = 100;
-                        if (obj.compass_id == 2)
-                            horizontalProgressBar3.Value = 100;
-                    }
-                    catch
-                    {
-                    }
-
-                    if ((MAVLink.MAG_CAL_STATUS)obj.cal_status != MAVLink.MAG_CAL_STATUS.MAG_CAL_SUCCESS)
-                    {
-                        //CustomMessageBox.Show(Strings.CommandFailed);
-                    }
-
-                    if (obj.autosaved == 1)
-                    {
-                        completecount++;
-                        timer1.Interval = 1000;
-                    }
-                }
+                var failure = magcal.FailureMessage(reports);
+                if (failure != null)
+                    CustomMessageBox.Show(failure, Strings.ERROR);
+                else
+                    CustomMessageBox.Show("Please reboot the autopilot");
             }
-
-            if (compasscount == completecount && compasscount != 0)
-            {
-                BUT_OBmagcalcancel.Enabled = false;
-                BUT_OBmagcalaccept.Enabled = false;
-                timer1.Stop();
-                CustomMessageBox.Show("Please reboot the autopilot");
-            }
-
         }
 
         private void buttonQuickPixhawk_Click(object sender, EventArgs e)
