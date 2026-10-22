@@ -528,9 +528,6 @@
     <Compile Update="GCSViews\FlightPlanner.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="GCSViews\Help.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
     <Compile Update="GCSViews\InitialSetup.cs">
       <SubType>UserControl</SubType>
     </Compile>
