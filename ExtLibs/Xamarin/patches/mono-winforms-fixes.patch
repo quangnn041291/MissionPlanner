@@ -170,7 +170,7 @@ index ebc67a2bf1..95efdb1017 100644
  			if (!string.IsNullOrEmpty (tooltip))
  				ToolTipWindow.Present (this, tooltip);
 diff --git a/mcs/class/System.Windows.Forms/xplatuimine.cs b/mcs/class/System.Windows.Forms/xplatuimine.cs
-index 1be7eb6a32..ce6a900b6b 100644
+index 5e2854fad6..4c0562eacd 100644
 --- a/mcs/class/System.Windows.Forms/xplatuimine.cs
 +++ b/mcs/class/System.Windows.Forms/xplatuimine.cs
 @@ -64,6 +64,16 @@ public override MouseButtons MouseButtons
@@ -190,7 +190,7 @@ index 1be7eb6a32..ce6a900b6b 100644
      public override Rectangle VirtualScreen
      {
          get
-@@ -2970,7 +2980,25 @@ public override void KillTimer(Timer timer)
+@@ -2963,7 +2973,25 @@ public override void KillTimer(Timer timer)
          }
          queue.timer_list.Remove(timer);
      }
@@ -217,7 +217,26 @@ index 1be7eb6a32..ce6a900b6b 100644
      public override void CreateCaret(IntPtr handle, int width, int height)
      {
          XGCValues	gc_values;
-@@ -3729,13 +3757,36 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
+@@ -3499,7 +3527,8 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
+ 
+                     ScreenToClient(hwnd, ref x, ref y);
+ 
+-                    lParam = (IntPtr)((y) << 16 | (x));
++                    // x is negative when the grabbed window is left of the mouse; mask it so it does not spill into y
++                    lParam = (IntPtr)((y << 16) | (x & 0xffff));
+ 
+                     if (!h.Mapped || !h.Visible)
+                         UngrabWindow(hwnd);
+@@ -3601,7 +3630,7 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
+ 
+                         ScreenToClient(hwnd, ref x, ref y);
+ 
+-                        lParam = (IntPtr) ((y ) << 16 | (x));
++                        lParam = (IntPtr)((y << 16) | (x & 0xffff));
+ 
+                         if(Control.FromHandle(h.Handle) is Form)
+                             PostMessage(hwnd, Msg.WM_NCPAINT, IntPtr.Zero, IntPtr.Zero);
+@@ -3722,13 +3751,36 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
                  return IntPtr.Zero;
              } else if (message == Msg.WM_MOUSEWHEEL)
              {
