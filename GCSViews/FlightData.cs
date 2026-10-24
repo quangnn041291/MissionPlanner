@@ -253,6 +253,7 @@ namespace MissionPlanner.GCSViews
             instance = this;
 
             this.tabControlactions.MouseDoubleClick += tabControlactions_MouseDoubleClick;
+            this.tabStatus.MouseWheel += statusTab_MouseWheel;
 
             this.SubMainLeft.Panel1.ControlAdded += (sender, e) => ManageLeftPanelVisibility();
             this.SubMainLeft.Panel1.ControlRemoved += (sender, e) => ManageLeftPanelVisibility();
@@ -6173,7 +6174,8 @@ namespace MissionPlanner.GCSViews
             g.Clear(Color.Transparent);
 
             int x = 10;
-            int y = 10;
+            int row = 0;
+            int rows = StatusRows(panel.ClientSize.Height);
 
             var list = MainV2.comPort.MAV.cs.GetItemList(true);
             var cs = bindingSourceStatusTab.Current as CurrentState;
@@ -6181,20 +6183,22 @@ namespace MissionPlanner.GCSViews
 
             foreach (var field in list)
             {
+                // start a new column once this one is full, so a column is never left empty at the end
+                if (row == rows)
+                {
+                    x += 190;
+                    row = 0;
+                }
+
+                int y = 10 + row * 15;
+
                 g.DrawString(field, this.Font, br, new RectangleF(x, y, 120, 15));
 
                 if (cs != null)
                     g.DrawString(typeof(CurrentState).GetProperty(field).GetValue(cs)?.ToString(), this.Font,
                         br, new RectangleF(x + 120, y, 50, 15));
 
-                x += 0;
-                y += 15;
-
-                if (y > panel.Height - 30)
-                {
-                    x += 190;
-                    y = 10;
-                }
+                row++;
             }
 
             if (panel.AutoScrollMinSize.Width < x)
@@ -6361,6 +6365,7 @@ namespace MissionPlanner.GCSViews
                 // drawn rather than made of controls, wrapping to a new column when it runs out of height
                 floating.Controls = new Control[0];
                 floating.Host.Paint += tabStatus_Paint;
+                floating.Host.MouseWheel += statusTab_MouseWheel;
                 size = StatusTabSize(work);
             }
             else
@@ -6439,17 +6444,32 @@ namespace MissionPlanner.GCSViews
             }
         }
 
-        // the status tab shows a row of 15 pixels per item, a column at a time
+        // the status tab shows a row of 15 pixels per item, a column at a time. Room is kept under the last row
+        // for the scroll bar along the bottom, which covers it when the columns do not all fit across
+        private static int StatusRows(int height)
+        {
+            return Math.Max(1, (height - SystemInformation.HorizontalScrollBarHeight - 40) / 15 + 1);
+        }
+
         private Size StatusTabSize(Rectangle work)
         {
             int count = MainV2.comPort.MAV.cs.GetItemList(true).Count;
 
             int maxheight = work.Height * 9 / 10 - 40;
-            int height = Math.Min(count * 15 + 50, maxheight);
-            int rows = Math.Max(1, (height - 40) / 15);
-            int columns = (count + rows - 1) / rows;
+            int height = Math.Min(40 + (count - 1) * 15 + SystemInformation.HorizontalScrollBarHeight, maxheight);
+            int columns = (count + StatusRows(height) - 1) / StatusRows(height);
 
             return new Size(Math.Min(columns * 190 + 30, work.Width * 9 / 10), height);
+        }
+
+        // the status tab only scrolls sideways, which the wheel does not do of itself: a column a notch
+        private void statusTab_MouseWheel(object sender, MouseEventArgs e)
+        {
+            var panel = (ScrollableControl) sender;
+
+            int x = -panel.AutoScrollPosition.X - Math.Sign(e.Delta) * 190;
+            panel.AutoScrollPosition = new Point(Math.Max(0, x), -panel.AutoScrollPosition.Y);
+            panel.Invalidate();
         }
 
         // what the controls of a tab take up, so the window does not need scrolling when the screen has room
