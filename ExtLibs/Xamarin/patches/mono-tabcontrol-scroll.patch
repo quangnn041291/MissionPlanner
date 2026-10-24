@@ -1,0 +1,36 @@
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
+index c7bf018d21..7ae80d6393 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
+@@ -810,6 +810,31 @@ protected override bool ProcessKeyPreview (ref Message m)
+ 			return base.ProcessKeyPreview (ref m);
+ 		}
+ 
++		protected override void OnMouseWheel (MouseEventArgs e)
++		{
++			base.OnMouseWheel (e);
++
++			// over the tabs, scroll them as the buttons do
++			if (!ShowSlider || e.Delta == 0 || DisplayRectangle.Contains (e.Location))
++				return;
++
++			if (e.Delta > 0 ? !CanScrollLeft : !CanScrollRight)
++				return;
++
++			slider_pos += e.Delta > 0 ? -1 : 1;
++			SizeTabs ();
++			Invalidate ();
++		}
++
++		protected override void OnMouseDoubleClick (MouseEventArgs e)
++		{
++			// quick clicks on the scroll buttons are not a double click on the tab underneath
++			if (ShowSlider && (LeftScrollButtonArea.Contains (e.Location) || RightScrollButtonArea.Contains (e.Location)))
++				return;
++
++			base.OnMouseDoubleClick (e);
++		}
++
+ 		protected override void OnKeyDown (KeyEventArgs ke)
+ 		{
+ 			base.OnKeyDown (ke);
