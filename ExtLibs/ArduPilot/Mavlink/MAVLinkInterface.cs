@@ -1676,6 +1676,8 @@ Mission Planner waits for 2 valid heartbeat packets before connecting
             int currentparamcount = MAVlist[sysid, compid].param.Count;
 
             bool complete = false;
+            // what the vehicle said the param is when it was not what was asked for
+            string notApplied = null;
 
             var sub1 = SubscribeToPacketType(MAVLINK_MSG_ID.PARAM_VALUE, buffer =>
             {
@@ -1728,7 +1730,12 @@ Mission Planner waits for 2 valid heartbeat packets before connecting
                         */
                     }
 
-                    complete = true;
+                    // an answer for this param is only the answer to this set if it holds the value sent. Any
+                    // other is the vehicle refusing the value, or an older answer still on its way
+                    if (BitConverter.GetBytes(par.param_value).SequenceEqual(BitConverter.GetBytes(req.param_value)))
+                        complete = true;
+                    else
+                        notApplied = MAVlist[sysid, compid].param[st].ToString();
                 }
 
                 return true;
@@ -1758,6 +1765,10 @@ Mission Planner waits for 2 valid heartbeat packets before connecting
                             retrys--;
                             continue;
                         }
+
+                        if (notApplied != null)
+                            throw new Exception("setParam " + paramname + " not applied, the vehicle has " +
+                                                notApplied + " not " + value);
 
                         throw new TimeoutException("Timeout on read - setParam " + paramname);
                     }

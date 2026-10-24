@@ -256,6 +256,9 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
         private void BUT_writePIDS_Click(object sender, EventArgs e)
         {
+            // a value still being typed is not in the changes yet, ctrl+s does not leave the cell to commit it
+            Params.EndEdit();
+
             // sort with enable at the bottom - this ensures params are set before the function is disabled
             var temp = _changes.Keys.Cast<string>().ToList();
 
