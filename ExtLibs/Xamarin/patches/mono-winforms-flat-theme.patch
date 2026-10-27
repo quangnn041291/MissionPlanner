@@ -201,11 +201,36 @@ index 622b0bede5..646ffb8771 100644
  
  		#region Standard
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
-index 7daef6d5ac..f2ece3aa5d 100644
+index 7daef6d5ac..f74fe66485 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
-@@ -299,11 +299,24 @@ public virtual void Draw (Graphics dc, Rectangle area, TabControl tab)
- 			if (tab.ShowSlider) {
+@@ -199,6 +199,10 @@ public TabControlPainter ()
+ 
+ 		public virtual Rectangle GetLeftScrollRect (System.Windows.Forms.TabControl tab)
+ 		{
++			// no arrows: nothing to click, and the tabs get the room they took
++			if (tab.HideSliderButtons)
++				return new Rectangle (tab.ClientRectangle.Right, tab.ClientRectangle.Top + 1, 0, 0);
++
+ 			switch (tab.Alignment) {
+ 				case TabAlignment.Top:
+ 					return new Rectangle (tab.ClientRectangle.Right - (scrollerWidth * 2), tab.ClientRectangle.Top + 1, scrollerWidth, scrollerWidth);
+@@ -210,6 +214,9 @@ public virtual Rectangle GetLeftScrollRect (System.Windows.Forms.TabControl tab)
+ 
+ 		public virtual Rectangle GetRightScrollRect (System.Windows.Forms.TabControl tab)
+ 		{
++			if (tab.HideSliderButtons)
++				return new Rectangle (tab.ClientRectangle.Right, tab.ClientRectangle.Top + 1, 0, 0);
++
+ 			switch (tab.Alignment) {
+ 				case TabAlignment.Top:
+ 					return new Rectangle (tab.ClientRectangle.Right - (scrollerWidth), tab.ClientRectangle.Top + 1, scrollerWidth, scrollerWidth);
+@@ -296,14 +303,27 @@ public virtual void Draw (Graphics dc, Rectangle area, TabControl tab)
+ 					DrawTab (dc, tab.TabPages[tab.SelectedIndex], tab, rect, true);
+ 			}
+ 
+-			if (tab.ShowSlider) {
++			if (tab.ShowSlider && !tab.HideSliderButtons) {
  				Rectangle right = GetRightScrollRect (tab);
  				Rectangle left = GetLeftScrollRect (tab);
 -				DrawScrollButton (dc, right, area, ScrollButton.Right, tab.RightSliderState);
@@ -231,7 +256,7 @@ index 7daef6d5ac..f2ece3aa5d 100644
  		protected virtual void DrawScrollButton (Graphics dc, Rectangle bounds, Rectangle clippingArea, ScrollButton button, PushButtonState state)
  		{
  			ControlPaint.DrawScrollButton (dc, bounds, button, GetButtonState (state));
-@@ -321,22 +334,21 @@ static ButtonState GetButtonState (PushButtonState state)
+@@ -321,22 +341,21 @@ static ButtonState GetButtonState (PushButtonState state)
  
  		protected virtual void DrawBackground (Graphics dc, Rectangle area, TabControl tab)
  		{
@@ -260,7 +285,7 @@ index 7daef6d5ac..f2ece3aa5d 100644
  
  			if (tab.Appearance == TabAppearance.Buttons || tab.Appearance == TabAppearance.FlatButtons) {
  				// Separators
-@@ -359,77 +371,43 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+@@ -359,77 +378,43 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
  
  
  			} else {
@@ -352,7 +377,7 @@ index 7daef6d5ac..f2ece3aa5d 100644
  						tab.Padding.X - 2, // drawstring adds some extra unwanted leading spaces, so trimming
  						tab.Padding.Y,
  						defaultFormatting);
-@@ -438,7 +416,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+@@ -438,7 +423,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
  					dc.TranslateTransform (bounds.Right, bounds.Top);
  					dc.RotateTransform (90);
  					dc.DrawString (page.Text, tab.Font,
@@ -361,7 +386,7 @@ index 7daef6d5ac..f2ece3aa5d 100644
  						tab.Padding.X - 2, // drawstring adds some extra unwanted leading spaces, so trimming
  						tab.Padding.Y,
  						defaultFormatting);
-@@ -474,7 +452,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+@@ -474,7 +459,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
  						str_rect.Width -= tab.ImageList.ImageSize.Width + 2;
  					}
  					dc.DrawString (page.Text, tab.Font,
@@ -370,7 +395,7 @@ index 7daef6d5ac..f2ece3aa5d 100644
  						str_rect, 
  						defaultFormatting);
  
-@@ -491,7 +469,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+@@ -491,7 +476,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
  			}
  
  			// TabControl ignores the value of ShowFocusCues
@@ -523,8 +548,30 @@ index 9196210f8f..a7408baca4 100644
  				} else
  					item_rect.Y = height * (index - top_index);
  
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridViewColumnHeaderCell.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridViewColumnHeaderCell.cs
+index 210fb481db..9a5bd3c528 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridViewColumnHeaderCell.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/DataGridViewColumnHeaderCell.cs
+@@ -186,9 +186,15 @@ protected override Size GetPreferredSize (Graphics graphics, DataGridViewCellSty
+ 
+ 				TextFormatFlags flags = TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter | TextFormatFlags.TextBoxControl;
+ 
++				// flat look: room either side of the text, which sits in the middle of the header, between
++				// the top of the cell and the border along its bottom. the sort arrow keeps its place
++				// at the right
+ 				Rectangle contentbounds = cellBounds;
+-				contentbounds.Height -= 2;
+-				contentbounds.Width -= 2;
++				contentbounds.X += 7;
++				contentbounds.Width -= 7 + 8;
++				contentbounds.Height -= 1;
++				if (sortGlyphDirection != SortOrder.None)
++					contentbounds.Width -= 14;
+ 
+ 				if (formattedValue != null)
+ 					TextRenderer.DrawText (graphics, formattedValue.ToString (), cellStyle.Font, contentbounds, color, flags);
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
-index 7ae80d6393..c28b5f52f1 100644
+index 7ae80d6393..e0e48adeb8 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
 @@ -151,6 +151,11 @@ public TabControl ()
@@ -539,7 +586,22 @@ index 7ae80d6393..c28b5f52f1 100644
  		public override Color BackColor {
  			get { return ThemeEngine.Current.ColorControl; }
  			set { /* nothing happens on set on MS */ }
-@@ -1309,7 +1314,7 @@ private void SizeTabs (int row_width, bool vertical)
+@@ -479,6 +484,14 @@ public TabControl ()
+ 		#endregion	// Public Instance Properties
+ 
+ 		#region Internal Properties
++		// flat look: a tab control that scrolls with the wheel and has no arrows to do it with. it says so
++		// by its Tag, as the application also builds for Windows, whose TabControl has no such property
++		internal const string HideSliderButtonsTag = "HideSliderButtons";
++
++		internal bool HideSliderButtons {
++			get { return Tag is string && (string) Tag == HideSliderButtonsTag; }
++		}
++
+ 		internal bool ShowSlider {
+ 			get { return show_slider; }
+ 			set {
+@@ -1309,7 +1322,7 @@ private void SizeTabs (int row_width, bool vertical)
  				width = item_size.Width;
  			} else {			
  				width = MeasureStringWidth (DeviceContext, page.Text, Font);
@@ -621,7 +683,7 @@ index afac75f304..11cb706f91 100644
  			return r;
  		}
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
-index 1afec18538..c29018791c 100644
+index 1afec18538..7681922314 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 @@ -100,6 +100,8 @@ public ThemeWin32Classic ()
@@ -740,7 +802,32 @@ index 1afec18538..c29018791c 100644
  		}
  		public override bool CombBoxBackgroundHasHotElementStyle (ComboBox comboBox)
  		{
-@@ -4658,6 +4660,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -2771,8 +2773,9 @@ public override void DrawListViewHeader (Graphics dc, Rectangle clip, ListView c
+ 							continue;
+ 
+ 						ListViewDrawColumnHeaderBackground (control, col, dc, rect, clip);
+-						rect.X += 5;
+-						rect.Width -= 10;
++						// flat look: a little more room either side of the text
++						rect.X += 8;
++						rect.Width -= 16;
+ 						if (rect.Width <= 0)
+ 							continue;
+ 
+@@ -2807,7 +2810,11 @@ public override void DrawListViewHeader (Graphics dc, Rectangle clip, ListView c
+ 							rect.Width -= image_width;
+ 						}
+ 
+-						dc.DrawString (col.Text, control.Font, SystemBrushes.ControlText, rect, col.Format);
++						// and the text in the middle of the header
++						using (StringFormat header_format = (StringFormat) col.Format.Clone ()) {
++							header_format.LineAlignment = StringAlignment.Center;
++							dc.DrawString (col.Text, control.Font, SystemBrushes.ControlText, rect, header_format);
++						}
+ 					}
+ 					int right = control.GetReorderedColumn (control.Columns.Count - 1).Rect.Right - control.h_marker;
+ 					if (right < control.Right) {
+@@ -4658,6 +4665,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  			Rectangle	first_arrow_area;
  			Rectangle	second_arrow_area;			
  			Rectangle	thumb_pos;
@@ -750,7 +837,7 @@ index 1afec18538..c29018791c 100644
  			
  			thumb_pos = bar.ThumbPos;
  
-@@ -4671,30 +4676,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4671,30 +4681,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Width = bar.Width;
  				bar.ThumbPos = thumb_pos;
  
@@ -785,7 +872,7 @@ index 1afec18538..c29018791c 100644
  			} else {
  				first_arrow_area = new Rectangle(0, 0, scrollbutton_width, bar.Height);
  				bar.FirstArrowArea = first_arrow_area;
-@@ -4705,30 +4701,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4705,30 +4706,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Height = bar.Height;
  				bar.ThumbPos = thumb_pos;
  
@@ -820,7 +907,7 @@ index 1afec18538..c29018791c 100644
  			}
  
  			/* Thumb */
-@@ -4737,8 +4724,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4737,8 +4729,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  
  		protected virtual void ScrollBar_DrawThumb(ScrollBar bar, Rectangle thumb_pos, Rectangle clip, Graphics dc)
  		{
@@ -844,7 +931,7 @@ index 1afec18538..c29018791c 100644
  		}
  
  		public override int ScrollBarButtonSize {
-@@ -6228,51 +6228,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
+@@ -6228,51 +6233,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
  			}
  		}
  
@@ -863,7 +950,8 @@ index 1afec18538..c29018791c 100644
 -			Color titlebar_color2 = Color.FromArgb (255, 166, 202, 240);
 -			Color color = ThemeEngine.Current.ColorControlDark;
 -			Color color2 = Color.FromArgb (255, 192, 192, 192);
--
++			Color frame = ManagedWindowFrameColor (form);
+ 
 -			Pen pen = ResPool.GetPen (ColorControl);
 -			Rectangle borders = new Rectangle (0, 0, form.Width, form.Height);
 -			ControlPaint.DrawBorder3D (dc, borders, Border3DStyle.Raised);
@@ -873,8 +961,7 @@ index 1afec18538..c29018791c 100644
 -				dc.DrawRectangle (pen, borders);
 -				borders.Inflate (-1, -1);
 -			}				
-+			Color frame = ManagedWindowFrameColor (form);
- 
+-
 -
 -			bool draw_titlebar_enabled = false;
 -			if (wm.Form.Parent != null && wm.Form.Parent is Form) {
@@ -908,7 +995,7 @@ index 1afec18538..c29018791c 100644
  						tbheight + bdwidth - 1, form.Width - bdwidth - 1,
  						tbheight + bdwidth - 1);
  			return tb;
-@@ -6287,6 +6264,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6287,6 +6269,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  			Rectangle tb = ManagedWindowDrawTitleBarAndBorders (dc, clip, wm);
  
  			Form form = wm.Form;
@@ -920,7 +1007,7 @@ index 1afec18538..c29018791c 100644
  			if (wm.ShowIcon) {
  				Rectangle icon = ManagedWindowGetTitleBarIconArea (wm);
  				if (icon.IntersectsWith (clip))
-@@ -6311,9 +6293,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6311,9 +6298,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  				format.Trimming = StringTrimming.EllipsisCharacter;
  				format.LineAlignment = StringAlignment.Center;
  
@@ -935,7 +1022,7 @@ index 1afec18538..c29018791c 100644
  						tb, format);
  			}
  		}
-@@ -6348,10 +6334,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
+@@ -6348,10 +6339,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
  
  		protected virtual void ManagedWindowDrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Form form)
  		{
@@ -1002,7 +1089,7 @@ index 1afec18538..c29018791c 100644
  		}
  
  		public override Rectangle ManagedWindowGetTitleBarIconArea (InternalWindowManager wm)
-@@ -6370,7 +6409,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
+@@ -6370,7 +6414,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
  
  		public override bool ManagedWindowTitleButtonHasHotElementStyle (TitleButton button, Form form)
  		{
@@ -1012,7 +1099,7 @@ index 1afec18538..c29018791c 100644
  		}
  
  		public override void ManagedWindowDrawMenuButton (Graphics dc, TitleButton button, Rectangle clip, InternalWindowManager wm)
-@@ -6406,16 +6446,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
+@@ -6406,16 +6451,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
  			DrawBorderInternal(graphics, bounds.Left, bounds.Bottom-1, bounds.Right-1, bounds.Bottom-1, bottomWidth, bottomColor, bottomStyle, Border3DSide.Bottom);
  		}
  
@@ -1121,7 +1208,7 @@ index 1afec18538..c29018791c 100644
  			Rectangle	rect= new Rectangle (rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
  			bool is_ColorControl = control_color.ToArgb () == ColorControl.ToArgb () ? true : false;
  			
-@@ -6426,82 +6554,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
+@@ -6426,82 +6559,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
  				rect.Height += 4;
  			}
  			

@@ -253,6 +253,9 @@ namespace MissionPlanner.GCSViews
             instance = this;
 
             this.tabControlactions.MouseDoubleClick += tabControlactions_MouseDoubleClick;
+            // the tabs scroll with the wheel, or the trackpad; the Mac build has no arrows for them. the
+            // Tag is how it is told, as Windows has no such property
+            this.tabControlactions.Tag = "HideSliderButtons";
             this.tabStatus.MouseWheel += statusTab_MouseWheel;
             this.flowLayoutPanelServos.MouseWheel += servoPanel_MouseWheel;
 
