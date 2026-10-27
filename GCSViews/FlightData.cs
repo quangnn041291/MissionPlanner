@@ -254,6 +254,7 @@ namespace MissionPlanner.GCSViews
 
             this.tabControlactions.MouseDoubleClick += tabControlactions_MouseDoubleClick;
             this.tabStatus.MouseWheel += statusTab_MouseWheel;
+            this.flowLayoutPanelServos.MouseWheel += servoPanel_MouseWheel;
 
             this.SubMainLeft.Panel1.ControlAdded += (sender, e) => ManageLeftPanelVisibility();
             this.SubMainLeft.Panel1.ControlRemoved += (sender, e) => ManageLeftPanelVisibility();
@@ -6177,9 +6178,9 @@ namespace MissionPlanner.GCSViews
             // the tab page, or the panel standing in for it when the tab is in a window of its own
             var panel = (Panel) sender;
 
-            var bmp = new Bitmap(panel.DisplayRectangle.Width, panel.DisplayRectangle.Height);
-            var g = Graphics.FromImage(bmp);
-            g.Clear(Color.Transparent);
+            // straight onto the panel, scrolled; drawn into a bitmap first it was blurred on a Retina Mac
+            var g = e.Graphics;
+            g.TranslateTransform(panel.AutoScrollPosition.X, panel.AutoScrollPosition.Y);
 
             int x = 10;
             int row = 0;
@@ -6217,9 +6218,6 @@ namespace MissionPlanner.GCSViews
 
                 panel.AutoScrollMinSize = new Size(x + 164, 0);
             }
-            e.Graphics.TranslateTransform(panel.AutoScrollPosition.X,
-                panel.AutoScrollPosition.Y);
-            e.Graphics.DrawImageUnscaled(bmp, 0, 0);
         }
 
         private void gMapControl1_MouseUp(object sender, MouseEventArgs e)
@@ -6478,6 +6476,18 @@ namespace MissionPlanner.GCSViews
             int x = -panel.AutoScrollPosition.X - Math.Sign(e.Delta) * 190;
             panel.AutoScrollPosition = new Point(Math.Max(0, x), -panel.AutoScrollPosition.Y);
             panel.Invalidate();
+        }
+
+        // the servo list flows down into columns, so it too only scrolls sideways: a column a notch
+        private void servoPanel_MouseWheel(object sender, MouseEventArgs e)
+        {
+            var panel = (ScrollableControl) sender;
+            if (panel.VerticalScroll.Visible || panel.Controls.Count == 0)
+                return;
+
+            var first = panel.Controls[0];
+            int x = -panel.AutoScrollPosition.X - Math.Sign(e.Delta) * (first.Width + first.Margin.Horizontal);
+            panel.AutoScrollPosition = new Point(Math.Max(0, x), -panel.AutoScrollPosition.Y);
         }
 
         // what the controls of a tab take up, so the window does not need scrolling when the screen has room
