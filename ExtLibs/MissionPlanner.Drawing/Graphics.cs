@@ -156,21 +156,31 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
         // screen's scale on a Retina screen. the Transform and ResetTransform work on top of it
         private SKMatrix _baseMatrix = SKMatrix.Identity;
 
+        // the transform as the drawing code sees it, without the canvas' own on top
+        private SKMatrix UserMatrix()
+        {
+            var matrix = _image.TotalMatrix;
+            return _baseMatrix.TryInvert(out var inverse) ? inverse.PreConcat(matrix) : matrix;
+        }
+
+        private void SetUserMatrix(SKMatrix matrix)
+        {
+            _image.SetMatrix(_baseMatrix.PreConcat(matrix));
+        }
+
         public Matrix Transform
         {
             get
             {
-                var matrix = _image.TotalMatrix;
-                if (_baseMatrix.TryInvert(out var inverse))
-                    matrix = inverse.PreConcat(matrix);
+                var matrix = UserMatrix();
                 return new Matrix(matrix.ScaleX, matrix.SkewX, matrix.SkewY,
                     matrix.ScaleY, matrix.TransX, matrix.TransY);
             }
             set
             {
-                _image.SetMatrix(_baseMatrix.PreConcat(new SKMatrix(value.M11, value.M12, value.OffsetX,
+                SetUserMatrix(new SKMatrix(value.M11, value.M12, value.OffsetX,
                     value.M21, value.M22, value.OffsetY,
-                    0, 0, 1)));
+                    0, 0, 1));
             }
         }
 
@@ -1490,9 +1500,10 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
 
             if (order == MatrixOrder.Append)
             {
-                var old = _image.TotalMatrix;
-                old = SKMatrix.CreateScaleTranslation(sx, sy, old.TransX, old.TransY);
-                _image.SetMatrix(old);
+                // on the drawing code's transform, not including the canvas' scale on a Retina screen, or
+                // what it sets would be that much too small
+                var old = UserMatrix();
+                SetUserMatrix(SKMatrix.CreateScaleTranslation(sx, sy, old.TransX, old.TransY));
             }
         }
 
@@ -1599,9 +1610,9 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
 
             if (order == MatrixOrder.Append)
             {
-                var old = _image.TotalMatrix;
-                old = SKMatrix.CreateScaleTranslation(old.ScaleX, old.ScaleY, f, f1);
-                _image.SetMatrix(old);
+                // as for ScaleTransform: in the drawing code's own units
+                var old = UserMatrix();
+                SetUserMatrix(SKMatrix.CreateScaleTranslation(old.ScaleX, old.ScaleY, f, f1));
             }
         }
 
