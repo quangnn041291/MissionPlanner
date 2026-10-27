@@ -1,3 +1,194 @@
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs
+index b29f7eb464..244323a5b9 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs
+@@ -41,57 +41,50 @@ public CheckBoxPainter ()
+ 
+ 		public void PaintCheckBox (Graphics g, Rectangle bounds, Color backColor, Color foreColor, ElementState state, FlatStyle style, CheckState checkState)
+ 		{
+-			switch (style) {
+-				case FlatStyle.Standard:
+-				case FlatStyle.System:
+-					switch (state) {
+-						case ElementState.Normal:
+-							DrawNormalCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-						case ElementState.Hot:
+-							DrawHotCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-						case ElementState.Pressed:
+-							DrawPressedCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-						case ElementState.Disabled:
+-							DrawDisabledCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
++			// flat look, whatever the style: a rounded box, filled with the accent and a white tick when checked
++			int size = Math.Min (13, Math.Min (bounds.Width, bounds.Height));
++			if (size < 4)
++				return;
++			RectangleF box = new RectangleF (bounds.X + (bounds.Width - size) / 2 + 0.5f, bounds.Y + (bounds.Height - size) / 2 + 0.5f, size - 1, size - 1);
++			bool enabled = state != ElementState.Disabled;
++
++			SmoothingMode old_mode = g.SmoothingMode;
++			g.SmoothingMode = SmoothingMode.AntiAlias;
++			using (GraphicsPath path = ThemeWin32Classic.FlatRoundedRect (box, 3)) {
++				if (checkState == CheckState.Unchecked) {
++					Color fill = state == ElementState.Pressed ? ThemeWin32Classic.FlatShade (backColor, 12) :
++						state == ElementState.Hot ? ThemeWin32Classic.FlatShade (backColor, 6) : backColor;
++					Color edge = state == ElementState.Hot ? SystemColors.Highlight : ThemeWin32Classic.FlatShade (backColor, enabled ? 45 : 22);
++					using (SolidBrush brush = new SolidBrush (fill))
++						g.FillPath (brush, path);
++					using (Pen pen = new Pen (edge, 1))
++						g.DrawPath (pen, path);
++				} else {
++					Color fill = SystemColors.Highlight;
++					if (!enabled)
++						fill = ThemeWin32Classic.FlatBlend (fill, backColor, 55);
++					else if (state == ElementState.Pressed)
++						fill = ThemeWin32Classic.FlatBlend (fill, Color.Black, 15);
++					else if (state == ElementState.Hot)
++						fill = ThemeWin32Classic.FlatBlend (fill, Color.White, 12);
++					using (SolidBrush brush = new SolidBrush (fill))
++						g.FillPath (brush, path);
++
++					using (Pen pen = new Pen (Color.White, Math.Max (1.5f, size / 8f))) {
++						pen.StartCap = LineCap.Round;
++						pen.EndCap = LineCap.Round;
++						pen.LineJoin = LineJoin.Round;
++						if (checkState == CheckState.Checked)
++							g.DrawLines (pen, new PointF[] {
++								new PointF (box.X + box.Width * 0.25f, box.Y + box.Height * 0.52f),
++								new PointF (box.X + box.Width * 0.43f, box.Y + box.Height * 0.70f),
++								new PointF (box.X + box.Width * 0.76f, box.Y + box.Height * 0.32f) });
++						else
++							g.DrawLine (pen, box.X + box.Width * 0.27f, box.Y + box.Height / 2, box.X + box.Width * 0.73f, box.Y + box.Height / 2);
+ 					}
+-					break;
+-				case FlatStyle.Flat:
+-					switch (state) {
+-						case ElementState.Normal:
+-							DrawFlatNormalCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-						case ElementState.Hot:
+-							DrawFlatHotCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-						case ElementState.Pressed:
+-							DrawFlatPressedCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-						case ElementState.Disabled:
+-							DrawFlatDisabledCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-					}
+-					break;
+-				case FlatStyle.Popup:
+-					switch (state) {
+-						case ElementState.Normal:
+-							DrawPopupNormalCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-						case ElementState.Hot:
+-							DrawPopupHotCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-						case ElementState.Pressed:
+-							DrawPopupPressedCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-						case ElementState.Disabled:
+-							DrawPopupDisabledCheckBox (g, bounds, backColor, foreColor, checkState);
+-							break;
+-					}
+-					break;
++				}
+ 			}
++			g.SmoothingMode = old_mode;
+ 		}
+ 
+ 		#region Standard
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/RadioButtonPainter.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/RadioButtonPainter.cs
+index 622b0bede5..f25fa77048 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/RadioButtonPainter.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/RadioButtonPainter.cs
+@@ -41,57 +41,32 @@ public RadioButtonPainter ()
+ 
+ 		public void PaintRadioButton (Graphics g, Rectangle bounds, Color backColor, Color foreColor, ElementState state, FlatStyle style, bool isChecked)
+ 		{
+-			switch (style) {
+-				case FlatStyle.Standard:
+-				case FlatStyle.System:
+-					switch (state) {
+-						case ElementState.Normal:
+-							DrawNormalRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-						case ElementState.Hot:
+-							DrawHotRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-						case ElementState.Pressed:
+-							DrawPressedRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-						case ElementState.Disabled:
+-							DrawDisabledRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-					}
+-					break;
+-				case FlatStyle.Flat:
+-					switch (state) {
+-						case ElementState.Normal:
+-							DrawFlatNormalRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-						case ElementState.Hot:
+-							DrawFlatHotRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-						case ElementState.Pressed:
+-							DrawFlatPressedRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-						case ElementState.Disabled:
+-							DrawFlatDisabledRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-					}
+-					break;
+-				case FlatStyle.Popup:
+-					switch (state) {
+-						case ElementState.Normal:
+-							DrawPopupNormalRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-						case ElementState.Hot:
+-							DrawPopupHotRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-						case ElementState.Pressed:
+-							DrawPopupPressedRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-						case ElementState.Disabled:
+-							DrawPopupDisabledRadioButton (g, bounds, backColor, foreColor, isChecked);
+-							break;
+-					}
+-					break;
++			// flat look, whatever the style: a ring, turning to the accent with a dot when checked
++			int size = Math.Min (13, Math.Min (bounds.Width, bounds.Height));
++			if (size < 4)
++				return;
++			RectangleF ring = new RectangleF (bounds.X + (bounds.Width - size) / 2 + 0.5f, bounds.Y + (bounds.Height - size) / 2 + 0.5f, size - 1, size - 1);
++			bool enabled = state != ElementState.Disabled;
++
++			Color accent = SystemColors.Highlight;
++			if (!enabled)
++				accent = ThemeWin32Classic.FlatBlend (accent, backColor, 55);
++			Color fill = state == ElementState.Pressed ? ThemeWin32Classic.FlatShade (backColor, 12) :
++				state == ElementState.Hot ? ThemeWin32Classic.FlatShade (backColor, 6) : backColor;
++			Color edge = isChecked || state == ElementState.Hot ? accent : ThemeWin32Classic.FlatShade (backColor, enabled ? 45 : 22);
++
++			SmoothingMode old_mode = g.SmoothingMode;
++			g.SmoothingMode = SmoothingMode.AntiAlias;
++			using (SolidBrush brush = new SolidBrush (fill))
++				g.FillEllipse (brush, ring);
++			using (Pen pen = new Pen (edge, isChecked ? 1.5f : 1f))
++				g.DrawEllipse (pen, ring);
++			if (isChecked) {
++				float dot = ring.Width * 0.46f;
++				using (SolidBrush brush = new SolidBrush (accent))
++					g.FillEllipse (brush, ring.X + (ring.Width - dot) / 2, ring.Y + (ring.Height - dot) / 2, dot, dot);
+ 			}
++			g.SmoothingMode = old_mode;
+ 		}
+ 
+ 		#region Standard
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
 index 7daef6d5ac..41f8ad14c7 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
@@ -161,6 +352,62 @@ index 9196210f8f..f7b2ef86be 100644
  			}
  		}
  
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/TextBoxBase.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/TextBoxBase.cs
+index 4085bb5eba..5e5916fc48 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/TextBoxBase.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/TextBoxBase.cs
+@@ -486,6 +486,9 @@ internal override void PaintControlBackground (PaintEventArgs pevent)
+ 				int height = FontHeight;
+ 				if (BorderStyle != BorderStyle.None) {
+ 					height += 7;
++				} else {
++					// flat look: borderless boxes get room above and below the text too
++					height += 4;
+ 				}
+ 				return height;
+ 			}
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/TextControl.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/TextControl.cs
+index f55b0e192b..80dcda1017 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/TextControl.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/TextControl.cs
+@@ -535,20 +535,21 @@ internal int OffsetY
+ 		internal void UpdateMargins ()
+ 		{
+ 			switch (owner.actual_border_style) {
++				// flat look: room either side of the text, and above it to match the taller box
+ 				case BorderStyle.None:
+-					left_margin = 0;
+-					top_margin = 0;
+-					right_margin = 1;
++					left_margin = 4;
++					top_margin = 2;
++					right_margin = 4;
+ 					break;
+ 				case BorderStyle.FixedSingle:
+-					left_margin = 2;
++					left_margin = 4;
+ 					top_margin = 2;
+-					right_margin = 3;
++					right_margin = 4;
+ 					break;
+ 				case BorderStyle.Fixed3D:
+-					left_margin = 1;
++					left_margin = 4;
+ 					top_margin = 1;
+-					right_margin = 2;
++					right_margin = 4;
+ 					break;
+ 			}
+ 		}
+@@ -1789,7 +1790,7 @@ internal void Draw (Graphics g, Rectangle clip)
+ 			/// We draw the single border ourself
+ 			///
+ 			if (owner.actual_border_style == BorderStyle.FixedSingle) {
+-				ControlPaint.DrawBorder (g, owner.ClientRectangle, Color.Black, ButtonBorderStyle.Solid);
++				ControlPaint.DrawBorder (g, owner.ClientRectangle, ThemeWin32Classic.FlatShade (owner.BackColor, 22), ButtonBorderStyle.Solid);
+ 			}
+ 
+ 			/// Make sure that we aren't drawing one more line then we need to
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 index e2a43c3f25..1b18116f8e 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
@@ -509,7 +756,7 @@ index 792cc9dbf8..089c7fded8 100644
  
  			private void tmrRepeat_Tick (object sender, EventArgs e)
 diff --git a/mcs/class/System.Windows.Forms/xplatuimine.cs b/mcs/class/System.Windows.Forms/xplatuimine.cs
-index 6433ae217f..1a513ae2c0 100644
+index 6433ae217f..d95a0f832f 100644
 --- a/mcs/class/System.Windows.Forms/xplatuimine.cs
 +++ b/mcs/class/System.Windows.Forms/xplatuimine.cs
 @@ -365,6 +365,13 @@ public override IntPtr CreateWindow(CreateParams cp)
@@ -554,3 +801,22 @@ index 6433ae217f..1a513ae2c0 100644
                                          g.Dispose();
                                          break;
                                      }
+@@ -3773,6 +3776,18 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
+                 mouse_position.X = x;
+                 mouse_position.Y = y;
+ 
++                // a window holding the mouse, such as a combo box's open drop down list, takes the wheel
++                if (Grab.Hwnd != IntPtr.Zero)
++                {
++                    var grabbed = Hwnd.ObjectFromHandle(Grab.Hwnd);
++                    if (grabbed != null && grabbed.Mapped && grabbed.Visible)
++                    {
++                        ScreenToClient(Grab.Hwnd, ref x, ref y);
++                        PostMessage(Grab.Hwnd, message, wParam, (IntPtr) ((y) << 16 | (x & 0xffff)));
++                        return IntPtr.Zero;
++                    }
++                }
++
+                 Control ctl = null;
+                 for (var cnt = Application.OpenForms.Count; cnt > 0 && ctl == null; cnt--)
+                 {
