@@ -234,6 +234,21 @@ namespace MissionPlanner.Utilities
 
             try
             {
+                //Mac and Android copy the system themes to the user directory, as the program directory is inside the app
+                var themeFiles = Directory.EnumerateFiles(userDir, "*.mpsystheme");
+                foreach (string currentFile in themeFiles)
+                {
+                    if (!ThemeNames.Contains(Path.GetFileName(currentFile)))
+                        ThemeNames.Add(Path.GetFileName(currentFile));
+                }
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex);
+            }
+
+            try
+            {
                 //Get theme files from user directory (user themes can be overwritten)
                 var themeFiles = Directory.EnumerateFiles(userDir, "*.mpusertheme");
                 foreach (string currentFile in themeFiles)
@@ -261,6 +276,9 @@ namespace MissionPlanner.Utilities
             if (Path.GetExtension(strThemeName).Equals(".mpsystheme", StringComparison.OrdinalIgnoreCase))
             {
                 themeFileToLoad = Settings.GetRunningDirectory() + strThemeName;
+                //Mac and Android keep the system themes in the user directory
+                if (!File.Exists(themeFileToLoad))
+                    themeFileToLoad = Settings.GetUserDataDirectory() + strThemeName;
             }
             else
             {
