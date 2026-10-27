@@ -66,6 +66,34 @@ namespace MissionPlanner.Controls
             _ColorMouseDown = Color.FromArgb(150, 0x2b, 0x3a, 0x03);
         }
 
+        /// <summary>
+        /// Radius of the rounded corners, in pixels
+        /// </summary>
+        [System.ComponentModel.Browsable(true), System.ComponentModel.Category("Appearance")]
+        [DefaultValue(4)]
+        public int CornerRadius { get; set; } = 4;
+
+        static GraphicsPath RoundedRect(RectangleF rect, float radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+
+            float dia = Math.Min(radius * 2, Math.Min(rect.Width, rect.Height));
+
+            if (dia < 1)
+            {
+                path.AddRectangle(rect);
+                return path;
+            }
+
+            path.AddArc(rect.Left, rect.Top, dia, dia, 180, 90);
+            path.AddArc(rect.Right - dia, rect.Top, dia, dia, 270, 90);
+            path.AddArc(rect.Right - dia, rect.Bottom - dia, dia, dia, 0, 90);
+            path.AddArc(rect.Left, rect.Bottom - dia, dia, dia, 90, 90);
+            path.CloseFigure();
+
+            return path;
+        }
+
         protected override void OnPaint(PaintEventArgs pevent)
         {
             //base.OnPaint(pevent);
@@ -79,67 +107,51 @@ namespace MissionPlanner.Controls
             {
                 Graphics gr = pevent.Graphics;
 
-                gr.Clear(this.BackColor);
+                // the corners outside the rounded edge show what the button sits on
+                Color corner = Parent != null && Parent.BackColor.A == 255 ? Parent.BackColor : this.BackColor;
+                gr.Clear(corner);
 
                 gr.SmoothingMode = SmoothingMode.AntiAlias;
 
                 Rectangle outside = new Rectangle(0, 0, this.Width, this.Height);
 
-                LinearGradientBrush linear = new LinearGradientBrush(outside, BGGradTop, BGGradBot, LinearGradientMode.Vertical);
-
-                Pen mypen = new Pen(Outline, 1);
-
-                GraphicsPath outline = new GraphicsPath();
-
-                float wid = this.Height / 3f;
-
-                wid = 1;
-
-                int width = this.Width - 1;
-                int height = this.Height - 1;
-
-                // tl
-                outline.AddArc(0, 0, wid, wid, 180, 90);
-                // top line
-                outline.AddLine(wid, 0, width - wid, 0);
-                // tr
-                outline.AddArc(width - wid, 0, wid, wid, 270, 90);
-                // br
-                outline.AddArc(width - wid, height - wid, wid, wid, 0, 90);
-                // bottom line
-                outline.AddLine(wid, height, width - wid, height);
-                // bl
-                outline.AddArc(0, height - wid, wid, wid, 90, 90);
-                // left line
-                outline.AddLine(0, height - wid, 0, wid - wid / 2);
-
-
-                gr.FillPath(linear, outline);
-
-                gr.DrawPath(mypen, outline);
-
-                SolidBrush mybrush = this.Enabled ? new SolidBrush(TextColor) : new SolidBrush(TextColorNotEnabled);
-
-                if (_mouseover)
+                // inset by half a pixel so the 1px outline lands on whole pixels
+                using (GraphicsPath outline = RoundedRect(new RectangleF(0.5f, 0.5f, this.Width - 1, this.Height - 1), CornerRadius))
                 {
-                    SolidBrush brush = new SolidBrush(ColorMouseOver);
+                    // flat when the theme gives one colour, a gradient when it gives two
+                    if (BGGradTop == BGGradBot)
+                    {
+                        using (SolidBrush fill = new SolidBrush(BGGradTop))
+                            gr.FillPath(fill, outline);
+                    }
+                    else
+                    {
+                        using (LinearGradientBrush linear = new LinearGradientBrush(outside, BGGradTop, BGGradBot, LinearGradientMode.Vertical))
+                            gr.FillPath(linear, outline);
+                    }
 
-                    gr.FillPath(brush, outline);
+                    if (!this.Enabled)
+                    {
+                        using (SolidBrush brush = new SolidBrush(_ColorNotEnabled))
+                            gr.FillPath(brush, outline);
+                    }
+                    else if (_mousedown)
+                    {
+                        using (SolidBrush brush = new SolidBrush(ColorMouseDown))
+                            gr.FillPath(brush, outline);
+                    }
+                    else if (_mouseover)
+                    {
+                        using (SolidBrush brush = new SolidBrush(ColorMouseOver))
+                            gr.FillPath(brush, outline);
+                    }
+
+                    if (Outline.A > 0)
+                    {
+                        using (Pen mypen = new Pen(Outline, 1))
+                            gr.DrawPath(mypen, outline);
+                    }
                 }
-                if (_mousedown)
-                {
-                    SolidBrush brush = new SolidBrush(ColorMouseDown);
-
-                    gr.FillPath(brush, outline);
-                }
-
-                if (!this.Enabled)
-                {
-                    SolidBrush brush = new SolidBrush(_ColorNotEnabled);
-
-                    gr.FillPath(brush, outline);
-                }
-
 
                 StringFormat stringFormat = new StringFormat();
                 stringFormat.Alignment = StringAlignment.Center;
@@ -150,7 +162,8 @@ namespace MissionPlanner.Controls
                 if (amppos != -1)
                     display = display.Remove(amppos, 1);
 
-                gr.DrawString(display, this.Font, mybrush, outside, stringFormat);
+                using (SolidBrush mybrush = new SolidBrush(this.Enabled ? TextColor : TextColorNotEnabled))
+                    gr.DrawString(display, this.Font, mybrush, outside, stringFormat);
             }
             catch { }
 
@@ -170,24 +183,29 @@ namespace MissionPlanner.Controls
         protected override void OnMouseEnter(EventArgs e)
         {
             _mouseover = true;
+            Invalidate();
             base.OnMouseEnter(e);
         }
 
         protected override void OnMouseLeave(EventArgs e)
         {
             _mouseover = false;
+            _mousedown = false;
+            Invalidate();
             base.OnMouseLeave(e);
         }
 
         protected override void OnMouseDown(MouseEventArgs mevent)
         {
             _mousedown = true;
+            Invalidate();
             base.OnMouseDown(mevent);
         }
 
         protected override void OnMouseUp(MouseEventArgs mevent)
         {
             _mousedown = false;
+            Invalidate();
             base.OnMouseUp(mevent);
         }
 
