@@ -130,6 +130,7 @@ namespace MissionPlanner.Controls
             //Get current theme and reapply
             ThemeManager.LoadTheme(Settings.Instance["theme"]);
             ThemeManager.ApplyThemeTo(MainV2.instance);
+            this.Close();
         }
 
         private void cbIconSet_CheckedChanged(object sender, EventArgs e)
