@@ -1,0 +1,556 @@
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
+index 7daef6d5ac..41f8ad14c7 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
+@@ -299,8 +299,9 @@ public virtual void Draw (Graphics dc, Rectangle area, TabControl tab)
+ 			if (tab.ShowSlider) {
+ 				Rectangle right = GetRightScrollRect (tab);
+ 				Rectangle left = GetLeftScrollRect (tab);
+-				DrawScrollButton (dc, right, area, ScrollButton.Right, tab.RightSliderState);
+-				DrawScrollButton (dc, left, area, ScrollButton.Left, tab.LeftSliderState);
++				// flat look: borderless arrows on the tab strip
++				ThemeWin32Classic.DrawFlatArrowButton (dc, right, ScrollButton.Right, tab.RightSliderState == PushButtonState.Pressed ? 12 : 0, true, tab.BackColor, tab.ForeColor);
++				ThemeWin32Classic.DrawFlatArrowButton (dc, left, ScrollButton.Left, tab.LeftSliderState == PushButtonState.Pressed ? 12 : 0, true, tab.BackColor, tab.ForeColor);
+ 			}
+ 		}
+ 
+@@ -321,14 +322,12 @@ static ButtonState GetButtonState (PushButtonState state)
+ 
+ 		protected virtual void DrawBackground (Graphics dc, Rectangle area, TabControl tab)
+ 		{
+-			Brush brush = SystemBrushes.Control;
+-			dc.FillRectangle (brush, area);
++			// flat look: the strip takes the control's colour, and the panel a thin line around it
++			dc.FillRectangle (ResPool.GetSolidBrush (tab.BackColor), area);
+ 			Rectangle panel_rect = GetTabPanelRect (tab);
+ 
+-			if (tab.Appearance == TabAppearance.Normal) {
+-				ControlPaint.DrawBorder3D (dc, panel_rect, Border3DStyle.RaisedInner, Border3DSide.Left | Border3DSide.Top);
+-				ControlPaint.DrawBorder3D (dc, panel_rect, Border3DStyle.Raised, Border3DSide.Right | Border3DSide.Bottom);
+-			}
++			if (tab.Appearance == TabAppearance.Normal)
++				ThemeEngine.Current.CPDrawBorder3D (dc, panel_rect, Border3DStyle.Flat, Border3DSide.All, tab.BackColor);
+ 		}
+ 
+ 		protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, System.Windows.Forms.TabControl tab, Rectangle bounds, bool is_selected)
+@@ -359,62 +358,24 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+ 
+ 
+ 			} else {
+-				CPColor cpcolor = ResPool.GetCPColor (tab.BackColor);
+-
+-				Pen light = ResPool.GetPen (cpcolor.LightLight);
+-
+-				switch (tab.Alignment) {
++				if (is_selected) {
++					dc.FillRectangle (ResPool.GetSolidBrush (ThemeWin32Classic.FlatShade (tab.BackColor, 8)), bounds);
+ 
++					Brush accent = ResPool.GetSolidBrush (SystemColors.Highlight);
++					switch (tab.Alignment) {
+ 					case TabAlignment.Top:
+-
+-						dc.DrawLine (light, bounds.Left, bounds.Bottom - 1, bounds.Left, bounds.Top + 3);
+-						dc.DrawLine (light, bounds.Left, bounds.Top + 3, bounds.Left + 2, bounds.Top);
+-						dc.DrawLine (light, bounds.Left + 2, bounds.Top, bounds.Right - 3, bounds.Top);
+-
+-						dc.DrawLine (SystemPens.ControlDark, bounds.Right - 2, bounds.Top + 1, bounds.Right - 2, bounds.Bottom - 1);
+-						dc.DrawLine (SystemPens.ControlDarkDark, bounds.Right - 2, bounds.Top + 1, bounds.Right - 1, bounds.Top + 2);
+-						dc.DrawLine (SystemPens.ControlDarkDark, bounds.Right - 1, bounds.Top + 2, bounds.Right - 1, bounds.Bottom - 1);
++						dc.FillRectangle (accent, bounds.Left, bounds.Bottom - 2, bounds.Width, 2);
+ 						break;
+-
+ 					case TabAlignment.Bottom:
+-
+-						dc.DrawLine (light, bounds.Left, bounds.Top, bounds.Left, bounds.Bottom - 2);
+-						dc.DrawLine (light, bounds.Left, bounds.Bottom - 2, bounds.Left + 3, bounds.Bottom);
+-						
+-						dc.DrawLine (SystemPens.ControlDarkDark, bounds.Left + 3, bounds.Bottom, bounds.Right - 3, bounds.Bottom);
+-						dc.DrawLine (SystemPens.ControlDark, bounds.Left + 3, bounds.Bottom - 1, bounds.Right - 3, bounds.Bottom - 1);
+-
+-						dc.DrawLine (SystemPens.ControlDark, bounds.Right - 2, bounds.Bottom - 1, bounds.Right - 2, bounds.Top + 1);
+-						dc.DrawLine (SystemPens.ControlDarkDark, bounds.Right - 2, bounds.Bottom - 1, bounds.Right - 1, bounds.Bottom - 2);
+-						dc.DrawLine (SystemPens.ControlDarkDark, bounds.Right - 1, bounds.Bottom - 2, bounds.Right - 1, bounds.Top + 1);
+-
++						dc.FillRectangle (accent, bounds.Left, bounds.Top, bounds.Width, 2);
+ 						break;
+-
+ 					case TabAlignment.Left:
+-
+-						dc.DrawLine (light, bounds.Left - 2, bounds.Top, bounds.Right, bounds.Top);
+-						dc.DrawLine (light, bounds.Left, bounds.Top + 2, bounds.Left - 2, bounds.Top);
+-						dc.DrawLine (light, bounds.Left, bounds.Top + 2, bounds.Left, bounds.Bottom - 2);
+-
+-						dc.DrawLine (SystemPens.ControlDark, bounds.Left, bounds.Bottom - 2, bounds.Left + 2, bounds.Bottom - 1);
+-
+-						dc.DrawLine (SystemPens.ControlDark, bounds.Left + 2, bounds.Bottom - 1, bounds.Right, bounds.Bottom - 1);
+-						dc.DrawLine (SystemPens.ControlDarkDark, bounds.Left + 2, bounds.Bottom, bounds.Right, bounds.Bottom);
+-
++						dc.FillRectangle (accent, bounds.Right - 2, bounds.Top, 2, bounds.Height);
+ 						break;
+-
+ 					default: // TabAlignment.Right
+-
+-						dc.DrawLine (light, bounds.Left, bounds.Top, bounds.Right - 3, bounds.Top);
+-						dc.DrawLine (light, bounds.Right - 3, bounds.Top, bounds.Right, bounds.Top + 3);
+-
+-						dc.DrawLine (SystemPens.ControlDark, bounds.Right - 1, bounds.Top + 1, bounds.Right - 1, bounds.Bottom - 1);
+-						dc.DrawLine (SystemPens.ControlDark, bounds.Left, bounds.Bottom - 1, bounds.Right - 2, bounds.Bottom - 1);
+-
+-						dc.DrawLine (SystemPens.ControlDarkDark, bounds.Right, bounds.Top + 3, bounds.Right, bounds.Bottom - 3);
+-						dc.DrawLine (SystemPens.ControlDarkDark, bounds.Left, bounds.Bottom, bounds.Right - 3, bounds.Bottom);
+-
++						dc.FillRectangle (accent, bounds.Left, bounds.Top, 2, bounds.Height);
+ 						break;
++					}
+ 				}
+ 			}
+ 
+@@ -424,12 +385,14 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+ 				bounds.Width - (padding.X * 2), 
+ 				bounds.Height - (padding.Y * 2));
+ 
++			Brush text_brush = ResPool.GetSolidBrush (is_selected ? tab.ForeColor : ThemeWin32Classic.FlatBlend (tab.ForeColor, tab.BackColor, 35));
++
+ 			if (tab.DrawMode == TabDrawMode.Normal && page.Text != null) {
+ 				if (tab.Alignment == TabAlignment.Left) {
+ 					dc.TranslateTransform (bounds.Left, bounds.Bottom);
+ 					dc.RotateTransform (-90);
+ 					dc.DrawString (page.Text, tab.Font,
+-						SystemBrushes.ControlText, 
++						text_brush, 
+ 						tab.Padding.X - 2, // drawstring adds some extra unwanted leading spaces, so trimming
+ 						tab.Padding.Y,
+ 						defaultFormatting);
+@@ -438,7 +401,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+ 					dc.TranslateTransform (bounds.Right, bounds.Top);
+ 					dc.RotateTransform (90);
+ 					dc.DrawString (page.Text, tab.Font,
+-						SystemBrushes.ControlText, 
++						text_brush, 
+ 						tab.Padding.X - 2, // drawstring adds some extra unwanted leading spaces, so trimming
+ 						tab.Padding.Y,
+ 						defaultFormatting);
+@@ -474,7 +437,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+ 						str_rect.Width -= tab.ImageList.ImageSize.Width + 2;
+ 					}
+ 					dc.DrawString (page.Text, tab.Font,
+-						SystemBrushes.ControlText,
++						text_brush,
+ 						str_rect, 
+ 						defaultFormatting);
+ 
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
+index 9196210f8f..f7b2ef86be 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
+@@ -1472,14 +1472,9 @@ internal void Draw (Rectangle clip, Graphics dc)
+ 				else
+ 					current_state = ButtonState.Inactive;
+ 
+-				if (is_flat || theme.ComboBoxNormalDropDownButtonHasTransparentBackground (this, current_state))
+-					dc.FillRectangle (theme.ResPool.GetSolidBrush (theme.ColorControl), button_area);
+-
+-				if (is_flat) {
+-					theme.DrawFlatStyleComboButton (dc, button_area, current_state);
+-				} else {
+-					theme.ComboBoxDrawNormalDropDownButton (this, dc, clip, button_area, current_state); 
+-				}
++				// flat look: a borderless button the colour of the box, with a chevron in the text colour
++				ThemeWin32Classic.DrawFlatArrowButton (dc, button_area, ScrollButton.Down,
++					(current_state & ButtonState.Pushed) != 0 ? 12 : 0, is_enabled, BackColor, ForeColor);
+ 			}
+ 		}
+ 
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
+index e2a43c3f25..1b18116f8e 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
+@@ -1666,7 +1666,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
+ 		public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rectangle clippingArea, FlatStyle style)
+ 		{
+ 			if (!comboBox.Enabled)
+-				g.FillRectangle (ResPool.GetSolidBrush (ColorControl), comboBox.ClientRectangle);
++				g.FillRectangle (ResPool.GetSolidBrush (comboBox.BackColor), comboBox.ClientRectangle);
+ 
+ 			if (comboBox.DropDownStyle == ComboBoxStyle.Simple)
+ 				g.FillRectangle (ResPool.GetSolidBrush (comboBox.Parent.BackColor), comboBox.ClientRectangle);
+@@ -1680,7 +1680,7 @@ public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rect
+ 			}
+ 			bool is_flat = style == FlatStyle.Flat || style == FlatStyle.Popup;
+ 			if (!is_flat && clippingArea.IntersectsWith (comboBox.TextArea))
+-				ControlPaint.DrawBorder3D (g, comboBox.TextArea, Border3DStyle.Sunken);
++				CPDrawBorder3D (g, comboBox.TextArea, Border3DStyle.Sunken, Border3DSide.All, comboBox.BackColor);
+ 		}
+ 		public override bool CombBoxBackgroundHasHotElementStyle (ComboBox comboBox)
+ 		{
+@@ -4655,6 +4655,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+ 			Rectangle	first_arrow_area;
+ 			Rectangle	second_arrow_area;			
+ 			Rectangle	thumb_pos;
++			Color		back = bar.BackColor;
++			Brush		track = ResPool.GetSolidBrush (back);
++			Brush		track_pressed = ResPool.GetSolidBrush (FlatShade (back, 6));
+ 			
+ 			thumb_pos = bar.ThumbPos;
+ 
+@@ -4668,30 +4671,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+ 				thumb_pos.Width = bar.Width;
+ 				bar.ThumbPos = thumb_pos;
+ 
+-				Brush VerticalBrush;
+ 				/* Background, upper track */
+-				if (bar.thumb_moving == ScrollBar.ThumbMoving.Backwards)
+-					VerticalBrush = ResPool.GetHatchBrush (HatchStyle.Percent50, Color.FromArgb (255, 63, 63, 63), Color.Black);
+-				else
+-					VerticalBrush = ResPool.GetHatchBrush (HatchStyle.Percent50, ColorScrollBar, Color.White);
+ 				Rectangle UpperTrack = new Rectangle (0, 0, bar.ClientRectangle.Width, bar.ThumbPos.Bottom);
+ 				if (clip.IntersectsWith (UpperTrack))
+-					dc.FillRectangle (VerticalBrush, UpperTrack);
++					dc.FillRectangle (bar.thumb_moving == ScrollBar.ThumbMoving.Backwards ? track_pressed : track, UpperTrack);
+ 
+ 				/* Background, lower track */
+-				if (bar.thumb_moving == ScrollBar.ThumbMoving.Forward)
+-					VerticalBrush = ResPool.GetHatchBrush (HatchStyle.Percent50, Color.FromArgb (255, 63, 63, 63), Color.Black);
+-				else
+-					VerticalBrush = ResPool.GetHatchBrush (HatchStyle.Percent50, ColorScrollBar, Color.White);
+ 				Rectangle LowerTrack = new Rectangle (0, bar.ThumbPos.Bottom, bar.ClientRectangle.Width, bar.ClientRectangle.Height - bar.ThumbPos.Bottom);
+ 				if (clip.IntersectsWith (LowerTrack))
+-					dc.FillRectangle (VerticalBrush, LowerTrack);
++					dc.FillRectangle (bar.thumb_moving == ScrollBar.ThumbMoving.Forward ? track_pressed : track, LowerTrack);
+ 
+ 				/* Buttons */
+ 				if (clip.IntersectsWith (first_arrow_area))
+-					CPDrawScrollButton (dc, first_arrow_area, ScrollButton.Up, bar.firstbutton_state);
++					DrawFlatArrowButton (dc, first_arrow_area, ScrollButton.Up, (bar.firstbutton_state & ButtonState.Pushed) != 0 ? 12 : 0, bar.Enabled, back, bar.ForeColor);
+ 				if (clip.IntersectsWith (second_arrow_area))
+-					CPDrawScrollButton (dc, second_arrow_area, ScrollButton.Down, bar.secondbutton_state);
++					DrawFlatArrowButton (dc, second_arrow_area, ScrollButton.Down, (bar.secondbutton_state & ButtonState.Pushed) != 0 ? 12 : 0, bar.Enabled, back, bar.ForeColor);
+ 			} else {
+ 				first_arrow_area = new Rectangle(0, 0, scrollbutton_width, bar.Height);
+ 				bar.FirstArrowArea = first_arrow_area;
+@@ -4702,30 +4696,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+ 				thumb_pos.Height = bar.Height;
+ 				bar.ThumbPos = thumb_pos;
+ 
+-				Brush HorizontalBrush;
+ 				//Background, left track
+-				if (bar.thumb_moving == ScrollBar.ThumbMoving.Backwards)
+-					HorizontalBrush = ResPool.GetHatchBrush (HatchStyle.Percent50, Color.FromArgb (255, 63, 63, 63), Color.Black);
+-				else
+-					HorizontalBrush = ResPool.GetHatchBrush (HatchStyle.Percent50, ColorScrollBar, Color.White);
+ 				Rectangle LeftTrack = new Rectangle (0, 0, bar.ThumbPos.Right, bar.ClientRectangle.Height);
+ 				if (clip.IntersectsWith (LeftTrack))
+-					dc.FillRectangle (HorizontalBrush, LeftTrack);
++					dc.FillRectangle (bar.thumb_moving == ScrollBar.ThumbMoving.Backwards ? track_pressed : track, LeftTrack);
+ 
+ 				//Background, right track
+-				if (bar.thumb_moving == ScrollBar.ThumbMoving.Forward)
+-					HorizontalBrush = ResPool.GetHatchBrush (HatchStyle.Percent50, Color.FromArgb (255, 63, 63, 63), Color.Black);
+-				else
+-					HorizontalBrush = ResPool.GetHatchBrush (HatchStyle.Percent50, ColorScrollBar, Color.White);
+ 				Rectangle RightTrack = new Rectangle (bar.ThumbPos.Right, 0, bar.ClientRectangle.Width - bar.ThumbPos.Right, bar.ClientRectangle.Height);
+ 				if (clip.IntersectsWith (RightTrack))
+-					dc.FillRectangle (HorizontalBrush, RightTrack);
++					dc.FillRectangle (bar.thumb_moving == ScrollBar.ThumbMoving.Forward ? track_pressed : track, RightTrack);
+ 
+ 				/* Buttons */
+ 				if (clip.IntersectsWith (first_arrow_area))
+-					CPDrawScrollButton (dc, first_arrow_area, ScrollButton.Left, bar.firstbutton_state);
++					DrawFlatArrowButton (dc, first_arrow_area, ScrollButton.Left, (bar.firstbutton_state & ButtonState.Pushed) != 0 ? 12 : 0, bar.Enabled, back, bar.ForeColor);
+ 				if (clip.IntersectsWith (second_arrow_area))
+-					CPDrawScrollButton (dc, second_arrow_area, ScrollButton.Right, bar.secondbutton_state);
++					DrawFlatArrowButton (dc, second_arrow_area, ScrollButton.Right, (bar.secondbutton_state & ButtonState.Pushed) != 0 ? 12 : 0, bar.Enabled, back, bar.ForeColor);
+ 			}
+ 
+ 			/* Thumb */
+@@ -4734,8 +4719,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+ 
+ 		protected virtual void ScrollBar_DrawThumb(ScrollBar bar, Rectangle thumb_pos, Rectangle clip, Graphics dc)
+ 		{
+-			if (bar.Enabled && thumb_pos.Width > 0 && thumb_pos.Height > 0 && clip.IntersectsWith(thumb_pos))
+-				DrawScrollButtonPrimitive(dc, thumb_pos, ButtonState.Normal);
++			if (!bar.Enabled || thumb_pos.Width <= 0 || thumb_pos.Height <= 0 || !clip.IntersectsWith(thumb_pos))
++				return;
++
++			// a pill inset from the sides of the track
++			RectangleF pill = bar.vert
++				? new RectangleF (thumb_pos.X + 3, thumb_pos.Y + 1, thumb_pos.Width - 6, thumb_pos.Height - 2)
++				: new RectangleF (thumb_pos.X + 1, thumb_pos.Y + 3, thumb_pos.Width - 2, thumb_pos.Height - 6);
++			if (pill.Width <= 0 || pill.Height <= 0)
++				return;
++
++			SmoothingMode old_mode = dc.SmoothingMode;
++			dc.SmoothingMode = SmoothingMode.AntiAlias;
++			using (GraphicsPath path = FlatRoundedRect (pill, Math.Min (pill.Width, pill.Height) / 2))
++				dc.FillPath (ResPool.GetSolidBrush (FlatShade (bar.BackColor, 30)), path);
++			dc.SmoothingMode = old_mode;
+ 		}
+ 
+ 		public override int ScrollBarButtonSize {
+@@ -6403,16 +6401,94 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
+ 			DrawBorderInternal(graphics, bounds.Left, bounds.Bottom-1, bounds.Right-1, bounds.Bottom-1, bottomWidth, bottomColor, bottomStyle, Border3DSide.Bottom);
+ 		}
+ 
++		#region Flat look
++		// A colour part way from back towards white on a dark background, or towards black on a light one
++		internal static Color FlatShade (Color back, int percent)
++		{
++			bool dark = (back.R * 299 + back.G * 587 + back.B * 114) / 1000 < 128;
++			int target = dark ? 255 : 0;
++			return Color.FromArgb (255,
++				back.R + (target - back.R) * percent / 100,
++				back.G + (target - back.G) * percent / 100,
++				back.B + (target - back.B) * percent / 100);
++		}
++
++		// fore taken part way towards back, for dimmed text and glyphs
++		internal static Color FlatBlend (Color fore, Color back, int percent)
++		{
++			return Color.FromArgb (255,
++				fore.R + (back.R - fore.R) * percent / 100,
++				fore.G + (back.G - fore.G) * percent / 100,
++				fore.B + (back.B - fore.B) * percent / 100);
++		}
++
++		// A thin chevron pointing the way of direction, centred in area
++		internal static void DrawFlatArrow (Graphics dc, Rectangle area, ScrollButton direction, Color color)
++		{
++			float size = Math.Max (2, Math.Min (area.Width, area.Height) / 5);
++			float half = size / 2f;
++			float cx = area.X + area.Width / 2f;
++			float cy = area.Y + area.Height / 2f;
++			PointF[] points;
++
++			switch (direction) {
++			case ScrollButton.Up:
++				points = new PointF[] { new PointF (cx - size, cy + half), new PointF (cx, cy - half), new PointF (cx + size, cy + half) };
++				break;
++			case ScrollButton.Left:
++				points = new PointF[] { new PointF (cx + half, cy - size), new PointF (cx - half, cy), new PointF (cx + half, cy + size) };
++				break;
++			case ScrollButton.Right:
++				points = new PointF[] { new PointF (cx - half, cy - size), new PointF (cx + half, cy), new PointF (cx - half, cy + size) };
++				break;
++			default:
++				points = new PointF[] { new PointF (cx - size, cy - half), new PointF (cx, cy + half), new PointF (cx + size, cy - half) };
++				break;
++			}
++
++			SmoothingMode old_mode = dc.SmoothingMode;
++			dc.SmoothingMode = SmoothingMode.AntiAlias;
++			using (Pen pen = new Pen (color, 1.6f)) {
++				pen.StartCap = LineCap.Round;
++				pen.EndCap = LineCap.Round;
++				pen.LineJoin = LineJoin.Round;
++				dc.DrawLines (pen, points);
++			}
++			dc.SmoothingMode = old_mode;
++		}
++
++		// A borderless button the colour of its control with a chevron on it; shade lightens or darkens it
++		// for hover (about 6) and pressed (about 12)
++		internal static void DrawFlatArrowButton (Graphics dc, Rectangle area, ScrollButton direction, int shade, bool enabled, Color back, Color fore)
++		{
++			using (SolidBrush brush = new SolidBrush (shade > 0 ? FlatShade (back, shade) : back))
++				dc.FillRectangle (brush, area);
++			DrawFlatArrow (dc, area, direction, FlatBlend (fore, back, enabled ? 20 : 65));
++		}
++
++		internal static GraphicsPath FlatRoundedRect (RectangleF rect, float radius)
++		{
++			GraphicsPath path = new GraphicsPath ();
++			float dia = Math.Min (radius * 2, Math.Min (rect.Width, rect.Height));
++			if (dia < 1) {
++				path.AddRectangle (rect);
++				return path;
++			}
++			path.AddArc (rect.Left, rect.Top, dia, dia, 180, 90);
++			path.AddArc (rect.Right - dia, rect.Top, dia, dia, 270, 90);
++			path.AddArc (rect.Right - dia, rect.Bottom - dia, dia, dia, 0, 90);
++			path.AddArc (rect.Left, rect.Bottom - dia, dia, dia, 90, 90);
++			path.CloseFigure ();
++			return path;
++		}
++		#endregion
++
+ 		public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Border3DStyle style, Border3DSide sides) {
+ 			CPDrawBorder3D(graphics, rectangle, style, sides, ColorControl);
+ 		}
+ 
+ 		public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Border3DStyle style, Border3DSide sides, Color control_color)
+ 		{
+-			Pen		penTopLeft;
+-			Pen		penTopLeftInner;
+-			Pen		penBottomRight;
+-			Pen		penBottomRightInner;
+ 			Rectangle	rect= new Rectangle (rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
+ 			bool is_ColorControl = control_color.ToArgb () == ColorControl.ToArgb () ? true : false;
+ 			
+@@ -6423,82 +6499,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
+ 				rect.Height += 4;
+ 			}
+ 			
+-			penTopLeft = penTopLeftInner = penBottomRight = penBottomRightInner = is_ColorControl ? SystemPens.Control : ResPool.GetPen (control_color);
+-			
+-			CPColor cpcolor = CPColor.Empty;
+-			
+-			if (!is_ColorControl)
+-				cpcolor = ResPool.GetCPColor (control_color);
+-			
+-			switch (style) {
+-			case Border3DStyle.Raised:
+-				penTopLeftInner = is_ColorControl ? SystemPens.ControlLightLight : ResPool.GetPen (cpcolor.LightLight);
+-				penBottomRight = is_ColorControl ? SystemPens.ControlDarkDark : ResPool.GetPen (cpcolor.DarkDark);
+-				penBottomRightInner = is_ColorControl ? SystemPens.ControlDark : ResPool.GetPen (cpcolor.Dark);
+-				break;
+-			case Border3DStyle.Sunken:
+-				penTopLeft = is_ColorControl ? SystemPens.ControlDark : ResPool.GetPen (cpcolor.Dark);
+-				penTopLeftInner = is_ColorControl ? SystemPens.ControlDarkDark : ResPool.GetPen (cpcolor.DarkDark);
+-				penBottomRight = is_ColorControl ? SystemPens.ControlLightLight : ResPool.GetPen (cpcolor.LightLight);
+-				break;
+-			case Border3DStyle.Etched:
+-				penTopLeft = penBottomRightInner = is_ColorControl ? SystemPens.ControlDark : ResPool.GetPen (cpcolor.Dark);
+-				penTopLeftInner = penBottomRight = is_ColorControl ? SystemPens.ControlLightLight : ResPool.GetPen (cpcolor.LightLight);
+-				break;
+-			case Border3DStyle.RaisedOuter:
+-				penBottomRight = is_ColorControl ? SystemPens.ControlDarkDark : ResPool.GetPen (cpcolor.DarkDark);
+-				break;
+-			case Border3DStyle.SunkenOuter:
+-				penTopLeft = is_ColorControl ? SystemPens.ControlDark : ResPool.GetPen (cpcolor.Dark);
+-				penBottomRight = is_ColorControl ? SystemPens.ControlLightLight : ResPool.GetPen (cpcolor.LightLight);
+-				break;
+-			case Border3DStyle.RaisedInner:
+-				penTopLeft = is_ColorControl ? SystemPens.ControlLightLight : ResPool.GetPen (cpcolor.LightLight);
+-				penBottomRight = is_ColorControl ? SystemPens.ControlDark : ResPool.GetPen (cpcolor.Dark);
+-				break;
+-			case Border3DStyle.SunkenInner:
+-				penTopLeft = is_ColorControl ? SystemPens.ControlDarkDark : ResPool.GetPen (cpcolor.DarkDark);
+-				break;
+-			case Border3DStyle.Flat:
+-				penTopLeft = penBottomRight = is_ColorControl ? SystemPens.ControlDark : ResPool.GetPen (cpcolor.Dark);
+-				break;
+-			case Border3DStyle.Bump:
+-				penTopLeftInner = penBottomRight = is_ColorControl ? SystemPens.ControlDarkDark : ResPool.GetPen (cpcolor.DarkDark);
+-				break;
+-			default:
+-				break;
+-			}
+-			
+-			bool inner = ((style != Border3DStyle.RaisedOuter) && (style != Border3DStyle.SunkenOuter));
+-			
+ 			if ((sides & Border3DSide.Middle) != 0) {
+ 				Brush brush = is_ColorControl ? SystemBrushes.Control : ResPool.GetSolidBrush (control_color);
+ 				graphics.FillRectangle (brush, rect);
+ 			}
+ 			
+-			if ((sides & Border3DSide.Left) != 0) {
+-				graphics.DrawLine (penTopLeft, rect.Left, rect.Bottom - 2, rect.Left, rect.Top);
+-				if ((rect.Width > 2) && inner)
+-					graphics.DrawLine (penTopLeftInner, rect.Left + 1, rect.Bottom - 2, rect.Left + 1, rect.Top);
+-			}
++			// flat look: a single line a little lighter or darker than the control, whatever the style
++			Pen pen = ResPool.GetPen (FlatShade (control_color, 22));
+ 			
+-			if ((sides & Border3DSide.Top) != 0) {
+-				graphics.DrawLine (penTopLeft, rect.Left, rect.Top, rect.Right - 2, rect.Top);
+-				if ((rect.Height > 2) && inner)
+-					graphics.DrawLine (penTopLeftInner, rect.Left + 1, rect.Top + 1, rect.Right - 3, rect.Top + 1);
+-			}
++			if ((sides & Border3DSide.Left) != 0)
++				graphics.DrawLine (pen, rect.Left, rect.Top, rect.Left, rect.Bottom - 1);
+ 			
+-			if ((sides & Border3DSide.Right) != 0) {
+-				graphics.DrawLine (penBottomRight, rect.Right - 1, rect.Top, rect.Right - 1, rect.Bottom - 1);
+-				if ((rect.Width > 3) && inner)
+-					graphics.DrawLine (penBottomRightInner, rect.Right - 2, rect.Top + 1, rect.Right - 2, rect.Bottom - 2);
+-			}
++			if ((sides & Border3DSide.Top) != 0)
++				graphics.DrawLine (pen, rect.Left, rect.Top, rect.Right - 1, rect.Top);
+ 			
+-			if ((sides & Border3DSide.Bottom) != 0) {
+-				graphics.DrawLine (penBottomRight, rect.Left, rect.Bottom - 1, rect.Right - 1, rect.Bottom - 1);
+-				if ((rect.Height > 3) && inner)
+-					graphics.DrawLine (penBottomRightInner, rect.Left + 1, rect.Bottom - 2, rect.Right - 2, rect.Bottom - 2);
+-			}
++			if ((sides & Border3DSide.Right) != 0)
++				graphics.DrawLine (pen, rect.Right - 1, rect.Top, rect.Right - 1, rect.Bottom - 1);
++			
++			if ((sides & Border3DSide.Bottom) != 0)
++				graphics.DrawLine (pen, rect.Left, rect.Bottom - 1, rect.Right - 1, rect.Bottom - 1);
+ 		}
+ 
+ 		public override void CPDrawButton (Graphics dc, Rectangle rectangle, ButtonState state)
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/UpDownBase.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/UpDownBase.cs
+index 792cc9dbf8..089c7fded8 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/UpDownBase.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/UpDownBase.cs
+@@ -116,8 +116,21 @@ private void redraw (Graphics graphics)
+ 					top_button_state = VisualStyles.PushButtonState.Disabled;
+ 					bottom_button_state = VisualStyles.PushButtonState.Disabled;
+ 				}
+-				ThemeEngine.Current.UpDownBaseDrawButton (graphics, top_button_rect, true, top_button_state);
+-				ThemeEngine.Current.UpDownBaseDrawButton (graphics, bottom_button_rect, false, bottom_button_state);
++				// flat look: borderless buttons the colour of the box, with chevrons in the text colour
++				ThemeWin32Classic.DrawFlatArrowButton (graphics, top_button_rect, ScrollButton.Up, FlatButtonShade (top_button_state), owner.Enabled, owner.BackColor, owner.ForeColor);
++				ThemeWin32Classic.DrawFlatArrowButton (graphics, bottom_button_rect, ScrollButton.Down, FlatButtonShade (bottom_button_state), owner.Enabled, owner.BackColor, owner.ForeColor);
++			}
++
++			static int FlatButtonShade (VisualStyles.PushButtonState state)
++			{
++				switch (state) {
++				case VisualStyles.PushButtonState.Pressed:
++					return 12;
++				case VisualStyles.PushButtonState.Hot:
++					return 6;
++				default:
++					return 0;
++				}
+ 			}
+ 
+ 			private void tmrRepeat_Tick (object sender, EventArgs e)
+diff --git a/mcs/class/System.Windows.Forms/xplatuimine.cs b/mcs/class/System.Windows.Forms/xplatuimine.cs
+index 6433ae217f..1a513ae2c0 100644
+--- a/mcs/class/System.Windows.Forms/xplatuimine.cs
++++ b/mcs/class/System.Windows.Forms/xplatuimine.cs
+@@ -365,6 +365,13 @@ public override IntPtr CreateWindow(CreateParams cp)
+         return hwnd.zombie ? IntPtr.Zero : hwnd.Handle;
+     }
+ 
++    // the colour a non client border is shaded from: the control's own background
++    static Color BorderBackColor(Hwnd hwnd)
++    {
++        Control ctrl = Control.FromHandle(hwnd.Handle);
++        return ctrl != null ? ctrl.BackColor : SystemColors.Control;
++    }
++
+     internal static Size TranslateWindowSizeToXWindowSize(CreateParams cp)
+     {
+         return TranslateWindowSizeToXWindowSize(cp, new Size(cp.Width, cp.Height));
+@@ -2552,12 +2559,9 @@ public override bool GetMessage(object queue_id, ref MSG msg, IntPtr hWnd, int w
+                                         Graphics g;
+ 
+                                         g = Graphics.FromSKImage(hwnd.hwndbmpNC);
+-                                        if (hwnd.border_static)
+-                                            ControlPaint.DrawBorder3D(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
+-                                                Border3DStyle.SunkenOuter);
+-                                        else
+-                                            ControlPaint.DrawBorder3D(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
+-                                                Border3DStyle.Sunken);
++                                        // flat look: a thin line in a shade of the control's colour
++                                        ThemeEngine.Current.CPDrawBorder3D(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
++                                            Border3DStyle.Flat, Border3DSide.All, BorderBackColor(hwnd));
+                                         g.Dispose();
+                                         break;
+                                     }
+@@ -2567,9 +2571,8 @@ public override bool GetMessage(object queue_id, ref MSG msg, IntPtr hWnd, int w
+                                         Graphics g;
+ 
+                                         g = Graphics.FromSKImage(hwnd.hwndbmpNC);
+-                                        ControlPaint.DrawBorder(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
+-                                            Color.Black,
+-                                            ButtonBorderStyle.Solid);
++                                        ThemeEngine.Current.CPDrawBorder3D(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
++                                            Border3DStyle.Flat, Border3DSide.All, BorderBackColor(hwnd));
+                                         g.Dispose();
+                                         break;
+                                     }
