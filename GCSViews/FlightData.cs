@@ -3145,9 +3145,9 @@ namespace MissionPlanner.GCSViews
             }
             else
             {
-                // green
-                hud1.groundColor1 = Color.FromArgb(0x9b, 0xb8, 0x24);
-                hud1.groundColor2 = Color.FromArgb(0x41, 0x4f, 0x07);
+                // the theme's ground, green in BurntKermit
+                hud1.groundColor1 = ThemeManager.HudGroundTop;
+                hud1.groundColor2 = ThemeManager.HudGroundBot;
             }
 
             Settings.config["groundColorToolStripMenuItem"] = groundColorToolStripMenuItem.Checked.ToString();
