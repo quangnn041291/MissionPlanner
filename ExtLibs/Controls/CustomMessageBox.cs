@@ -18,6 +18,15 @@ namespace MissionPlanner.MsgBox
 
         public static event ThemeManager ApplyTheme;
 
+        /// <summary>
+        /// Theme a form from this library the way the application themes its own
+        /// </summary>
+        public static void ApplyThemeTo(Control ctl)
+        {
+            if (ApplyTheme != null)
+                ApplyTheme(ctl);
+        }
+
         static DialogResult _state = DialogResult.None;
 
         public static DialogResult Show(string text)

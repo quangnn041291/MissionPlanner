@@ -41,6 +41,8 @@ namespace MissionPlanner.Controls
             
             this.btnClose.Visible = false;
 
+            // in the application's theme, as most places that show one do not theme it themselves
+            MsgBox.CustomMessageBox.ApplyThemeTo(this);
         }
 
         /// <summary>
