@@ -115,8 +115,8 @@ namespace MissionPlanner.Controls
 
                 Rectangle outside = new Rectangle(0, 0, this.Width, this.Height);
 
-                // inset by half a pixel so the 1px outline lands on whole pixels
-                using (GraphicsPath outline = RoundedRect(new RectangleF(0.5f, 0.5f, this.Width - 1, this.Height - 1), CornerRadius))
+                // fill whole pixels, so no edge is left half covered and showing dark against what is behind
+                using (GraphicsPath outline = RoundedRect(new RectangleF(0, 0, this.Width, this.Height), CornerRadius))
                 {
                     // flat when the theme gives one colour, a gradient when it gives two
                     if (BGGradTop == BGGradBot)
@@ -146,10 +146,13 @@ namespace MissionPlanner.Controls
                             gr.FillPath(brush, outline);
                     }
 
-                    if (Outline.A > 0)
+                    // an outline the colour of the fill would only blur the edge; a different one is drawn
+                    // half a pixel in, so it lands on whole pixels
+                    if (Outline.A > 0 && Outline.ToArgb() != BGGradTop.ToArgb())
                     {
+                        using (GraphicsPath border = RoundedRect(new RectangleF(0.5f, 0.5f, this.Width - 1, this.Height - 1), CornerRadius))
                         using (Pen mypen = new Pen(Outline, 1))
-                            gr.DrawPath(mypen, outline);
+                            gr.DrawPath(mypen, border);
                     }
                 }
 

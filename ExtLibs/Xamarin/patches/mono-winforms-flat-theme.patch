@@ -1,8 +1,8 @@
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs
-index b29f7eb464..bebfc412f6 100644
+index b29f7eb464..89625c7c87 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs
-@@ -41,57 +41,51 @@ public CheckBoxPainter ()
+@@ -41,57 +41,53 @@ public CheckBoxPainter ()
  
  		public void PaintCheckBox (Graphics g, Rectangle bounds, Color backColor, Color foreColor, ElementState state, FlatStyle style, CheckState checkState)
  		{
@@ -49,8 +49,10 @@ index b29f7eb464..bebfc412f6 100644
 +						fill = ThemeWin32Classic.FlatBlend (fill, Color.Black, 15);
 +					else if (state == ElementState.Hot)
 +						fill = ThemeWin32Classic.FlatBlend (fill, Color.White, 12);
++					// filled on whole pixels, as there is no border line to cover a half covered edge
++					using (GraphicsPath solid = ThemeWin32Classic.FlatRoundedRect (new RectangleF (box.X - 0.5f, box.Y - 0.5f, box.Width + 1, box.Height + 1), 3))
 +					using (SolidBrush brush = new SolidBrush (fill))
-+						g.FillPath (brush, path);
++						g.FillPath (brush, solid);
 +
 +					using (Pen pen = new Pen (Color.White, Math.Max (1.5f, size / 8f))) {
 +						pen.StartCap = LineCap.Round;
