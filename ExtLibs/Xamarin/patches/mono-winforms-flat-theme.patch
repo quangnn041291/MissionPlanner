@@ -607,7 +607,7 @@ index afac75f304..11cb706f91 100644
  			return r;
  		}
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
-index 1afec18538..27f6b8f770 100644
+index 1afec18538..c29018791c 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 @@ -100,6 +100,8 @@ public ThemeWin32Classic ()
@@ -619,7 +619,71 @@ index 1afec18538..27f6b8f770 100644
  		public override bool DoubleBufferingSupported {
  			// XplatUIMine paints each window into its own retained surface and only shows it once the
  			// paint has finished, so a control-level back buffer is a second full-size bitmap and an
-@@ -1576,6 +1578,13 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
+@@ -1520,28 +1522,23 @@ public override void DrawCheckedListBoxItem (CheckedListBox ctrl, DrawItemEventA
+ 		{			
+ 			Color back_color, fore_color;
+ 			Rectangle item_rect = e.Bounds;
+-			ButtonState state;
+ 
+ 			/* Draw checkbox */		
+ 
+-			if ((e.State & DrawItemState.Checked) == DrawItemState.Checked) {
+-				state = ButtonState.Checked;
+-				if ((e.State & DrawItemState.Inactive) == DrawItemState.Inactive)
+-					state |= ButtonState.Inactive;
+-			} else
+-				state = ButtonState.Normal;
+-
+-			if (ctrl.ThreeDCheckBoxes == false)
+-				state |= ButtonState.Flat;
+-
+-			Rectangle checkbox_rect = new Rectangle (2, (item_rect.Height - 11) / 2, CheckSize, CheckSize);
+-			ControlPaint.DrawCheckBox (e.Graphics,
+-				item_rect.X + checkbox_rect.X, item_rect.Y + checkbox_rect.Y,
+-				checkbox_rect.Width, checkbox_rect.Height,
+-				state);
+-
+-			item_rect.X += checkbox_rect.Right;
+-			item_rect.Width -= checkbox_rect.Right;
++			// flat look: the same check box a CheckBox has, in the middle of the row
++			CheckState check_state = (e.State & DrawItemState.Checked) == DrawItemState.Checked
++				? CheckState.Checked : CheckState.Unchecked;
++			ElementState element_state = (e.State & DrawItemState.Inactive) == DrawItemState.Inactive
++				? ElementState.Disabled : ElementState.Normal;
++			Rectangle checkbox_rect = new Rectangle (2, (item_rect.Height - CheckSize) / 2, CheckSize, CheckSize);
++			e.Graphics.FillRectangle (ResPool.GetSolidBrush (e.BackColor),
++				item_rect.X, item_rect.Y, checkbox_rect.Right + 4, item_rect.Height);
++			ThemeElements.CurrentTheme.CheckBoxPainter.PaintCheckBox (e.Graphics,
++				new Rectangle (item_rect.X + checkbox_rect.X, item_rect.Y + checkbox_rect.Y, checkbox_rect.Width, checkbox_rect.Height),
++				e.BackColor, e.ForeColor, element_state, FlatStyle.Standard, check_state);
++
++			item_rect.X += checkbox_rect.Right + 4;
++			item_rect.Width -= checkbox_rect.Right + 4;
+ 			
+ 			/* Draw text*/
+ 			if ((e.State & DrawItemState.Selected) == DrawItemState.Selected) {
+@@ -1556,13 +1553,13 @@ public override void DrawCheckedListBoxItem (CheckedListBox ctrl, DrawItemEventA
+ 			e.Graphics.FillRectangle (ResPool.GetSolidBrush
+ 				(back_color), item_rect);
+ 
+-			e.Graphics.DrawString (ctrl.GetItemText (ctrl.Items[e.Index]), e.Font,
+-				ResPool.GetSolidBrush (fore_color),
+-				item_rect, ctrl.StringFormat);
+-					
+-			if ((e.State & DrawItemState.Focus) == DrawItemState.Focus) {
+-				CPDrawFocusRectangle (e.Graphics, item_rect,
+-					fore_color, back_color);
++			// in the middle of the row, beside the check box; the highlight marks the item, without a
++			// dotted focus box
++			using (StringFormat format = (StringFormat) ctrl.StringFormat.Clone ()) {
++				format.LineAlignment = StringAlignment.Center;
++				e.Graphics.DrawString (ctrl.GetItemText (ctrl.Items[e.Index]), e.Font,
++					ResPool.GetSolidBrush (fore_color),
++					item_rect, format);
+ 			}
+ 		}
+ 		
+@@ -1576,6 +1573,13 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
  			StringFormat string_format = new StringFormat ();
  			string_format.FormatFlags = StringFormatFlags.LineLimit | StringFormatFlags.NoWrap;
  
@@ -633,7 +697,7 @@ index 1afec18538..27f6b8f770 100644
  			if ((e.State & DrawItemState.Selected) == DrawItemState.Selected) {
  				back_color = ColorHighlight;
  				fore_color = ColorHighlightText;
-@@ -1596,9 +1605,7 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
+@@ -1596,9 +1600,7 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
  					text_draw, string_format);
  			}
  			
@@ -644,7 +708,7 @@ index 1afec18538..27f6b8f770 100644
  
  			string_format.Dispose ();
  		}
-@@ -1669,7 +1676,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
+@@ -1669,7 +1671,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
  		public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rectangle clippingArea, FlatStyle style)
  		{
  			if (!comboBox.Enabled)
@@ -653,7 +717,7 @@ index 1afec18538..27f6b8f770 100644
  
  			if (comboBox.DropDownStyle == ComboBoxStyle.Simple)
  				g.FillRectangle (ResPool.GetSolidBrush (comboBox.Parent.BackColor), comboBox.ClientRectangle);
-@@ -1683,7 +1690,7 @@ public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rect
+@@ -1683,7 +1685,7 @@ public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rect
  			}
  			bool is_flat = style == FlatStyle.Flat || style == FlatStyle.Popup;
  			if (!is_flat && clippingArea.IntersectsWith (comboBox.TextArea))
@@ -662,7 +726,7 @@ index 1afec18538..27f6b8f770 100644
  		}
  		public override bool CombBoxBackgroundHasHotElementStyle (ComboBox comboBox)
  		{
-@@ -4658,6 +4665,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4658,6 +4660,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  			Rectangle	first_arrow_area;
  			Rectangle	second_arrow_area;			
  			Rectangle	thumb_pos;
@@ -672,7 +736,7 @@ index 1afec18538..27f6b8f770 100644
  			
  			thumb_pos = bar.ThumbPos;
  
-@@ -4671,30 +4681,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4671,30 +4676,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Width = bar.Width;
  				bar.ThumbPos = thumb_pos;
  
@@ -707,7 +771,7 @@ index 1afec18538..27f6b8f770 100644
  			} else {
  				first_arrow_area = new Rectangle(0, 0, scrollbutton_width, bar.Height);
  				bar.FirstArrowArea = first_arrow_area;
-@@ -4705,30 +4706,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4705,30 +4701,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Height = bar.Height;
  				bar.ThumbPos = thumb_pos;
  
@@ -742,7 +806,7 @@ index 1afec18538..27f6b8f770 100644
  			}
  
  			/* Thumb */
-@@ -4737,8 +4729,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4737,8 +4724,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  
  		protected virtual void ScrollBar_DrawThumb(ScrollBar bar, Rectangle thumb_pos, Rectangle clip, Graphics dc)
  		{
@@ -766,7 +830,7 @@ index 1afec18538..27f6b8f770 100644
  		}
  
  		public override int ScrollBarButtonSize {
-@@ -6228,51 +6233,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
+@@ -6228,51 +6228,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
  			}
  		}
  
@@ -785,8 +849,7 @@ index 1afec18538..27f6b8f770 100644
 -			Color titlebar_color2 = Color.FromArgb (255, 166, 202, 240);
 -			Color color = ThemeEngine.Current.ColorControlDark;
 -			Color color2 = Color.FromArgb (255, 192, 192, 192);
-+			Color frame = ManagedWindowFrameColor (form);
- 
+-
 -			Pen pen = ResPool.GetPen (ColorControl);
 -			Rectangle borders = new Rectangle (0, 0, form.Width, form.Height);
 -			ControlPaint.DrawBorder3D (dc, borders, Border3DStyle.Raised);
@@ -796,7 +859,8 @@ index 1afec18538..27f6b8f770 100644
 -				dc.DrawRectangle (pen, borders);
 -				borders.Inflate (-1, -1);
 -			}				
--
++			Color frame = ManagedWindowFrameColor (form);
+ 
 -
 -			bool draw_titlebar_enabled = false;
 -			if (wm.Form.Parent != null && wm.Form.Parent is Form) {
@@ -830,7 +894,7 @@ index 1afec18538..27f6b8f770 100644
  						tbheight + bdwidth - 1, form.Width - bdwidth - 1,
  						tbheight + bdwidth - 1);
  			return tb;
-@@ -6287,6 +6269,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6287,6 +6264,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  			Rectangle tb = ManagedWindowDrawTitleBarAndBorders (dc, clip, wm);
  
  			Form form = wm.Form;
@@ -842,7 +906,7 @@ index 1afec18538..27f6b8f770 100644
  			if (wm.ShowIcon) {
  				Rectangle icon = ManagedWindowGetTitleBarIconArea (wm);
  				if (icon.IntersectsWith (clip))
-@@ -6311,9 +6298,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6311,9 +6293,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  				format.Trimming = StringTrimming.EllipsisCharacter;
  				format.LineAlignment = StringAlignment.Center;
  
@@ -857,7 +921,7 @@ index 1afec18538..27f6b8f770 100644
  						tb, format);
  			}
  		}
-@@ -6348,10 +6339,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
+@@ -6348,10 +6334,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
  
  		protected virtual void ManagedWindowDrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Form form)
  		{
@@ -924,7 +988,7 @@ index 1afec18538..27f6b8f770 100644
  		}
  
  		public override Rectangle ManagedWindowGetTitleBarIconArea (InternalWindowManager wm)
-@@ -6370,7 +6414,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
+@@ -6370,7 +6409,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
  
  		public override bool ManagedWindowTitleButtonHasHotElementStyle (TitleButton button, Form form)
  		{
@@ -934,7 +998,7 @@ index 1afec18538..27f6b8f770 100644
  		}
  
  		public override void ManagedWindowDrawMenuButton (Graphics dc, TitleButton button, Rectangle clip, InternalWindowManager wm)
-@@ -6406,16 +6451,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
+@@ -6406,16 +6446,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
  			DrawBorderInternal(graphics, bounds.Left, bounds.Bottom-1, bounds.Right-1, bounds.Bottom-1, bottomWidth, bottomColor, bottomStyle, Border3DSide.Bottom);
  		}
  
@@ -1043,7 +1107,7 @@ index 1afec18538..27f6b8f770 100644
  			Rectangle	rect= new Rectangle (rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
  			bool is_ColorControl = control_color.ToArgb () == ColorControl.ToArgb () ? true : false;
  			
-@@ -6426,82 +6559,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
+@@ -6426,82 +6554,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
  				rect.Height += 4;
  			}
  			
