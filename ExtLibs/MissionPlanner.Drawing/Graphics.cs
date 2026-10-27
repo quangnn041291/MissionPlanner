@@ -952,7 +952,11 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
 
             if (format.Trimming == StringTrimming.EllipsisCharacter)
             {
-                textBounds = layoutRectangle.Size;
+                // text wider than its box is cut off at the edge, from the left, so it counts as no wider
+                // than the box; text that fits is aligned as asked, in the middle of the box if it is to
+                // be. its height stays what it is, or text asked to be vertically centred, as that of a
+                // table header is, would be placed at the top
+                textBounds.Width = Math.Min(textBounds.Width, layoutRectangle.Width);
             }
 
             var textPaint = _textPaint;
