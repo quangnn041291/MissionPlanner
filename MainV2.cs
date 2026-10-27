@@ -346,6 +346,47 @@ namespace MissionPlanner
             }
         }
 
+        public class modernmenuicons : menuicons
+        {
+            private string running_directory = Settings.GetRunningDirectory();
+
+            // a png of the same name next to the exe replaces the built in one
+            private Image Load(string name, Image builtin)
+            {
+                if (File.Exists($"{running_directory}{name}.png"))
+                    return Image.FromFile($"{running_directory}{name}.png");
+                else
+                    return builtin;
+            }
+
+            public override Image fd => Load("modern_flightdata_icon", global::MissionPlanner.Properties.Resources.modern_flightdata_icon);
+            public override Image fp => Load("modern_flightplan_icon", global::MissionPlanner.Properties.Resources.modern_flightplan_icon);
+            public override Image initsetup => Load("modern_initialsetup_icon", global::MissionPlanner.Properties.Resources.modern_initialsetup_icon);
+            public override Image config_tuning => Load("modern_tuningconfig_icon", global::MissionPlanner.Properties.Resources.modern_tuningconfig_icon);
+            public override Image sim => Load("modern_simulation_icon", global::MissionPlanner.Properties.Resources.modern_simulation_icon);
+            public override Image terminal => Load("modern_terminal_icon", global::MissionPlanner.Properties.Resources.modern_terminal_icon);
+            public override Image help => Load("modern_help_icon", global::MissionPlanner.Properties.Resources.modern_help_icon);
+            public override Image donate => Load("modern_donate_icon", global::MissionPlanner.Properties.Resources.modern_donate_icon);
+            public override Image connect => Load("modern_connect_icon", global::MissionPlanner.Properties.Resources.modern_connect_icon);
+            public override Image disconnect => Load("modern_disconnect_icon", global::MissionPlanner.Properties.Resources.modern_disconnect_icon);
+            public override Image wizard => Load("modern_wizard_icon", global::MissionPlanner.Properties.Resources.modern_wizard_icon);
+
+            // a flat menu bar in the theme's background colour
+            public override Image bg
+            {
+                get
+                {
+                    if (File.Exists($"{running_directory}modern_icon_background.png"))
+                        return Image.FromFile($"{running_directory}modern_icon_background.png");
+
+                    var bitmap = new Bitmap(16, 16);
+                    using (var g = Graphics.FromImage(bitmap))
+                        g.Clear(ThemeManager.BGColor);
+                    return bitmap;
+                }
+            }
+        }
+
         Controls.MainSwitcher MyView;
 
         private static DisplayView _displayConfiguration = File.Exists(DisplayViewExtensions.custompath)

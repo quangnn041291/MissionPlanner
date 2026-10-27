@@ -48,6 +48,7 @@ namespace MissionPlanner.Utilities
         {
             BurnKermitIconSet,
             HighContrastIconSet,
+            ModernIconSet,
         }
 
         public String strThemeName { get; set; }
@@ -124,6 +125,9 @@ namespace MissionPlanner.Utilities
                         break;
                     case IconSet.HighContrastIconSet:
                         MainV2.instance.switchicons(new MainV2.highcontrastmenuicons());
+                        break;
+                    case IconSet.ModernIconSet:
+                        MainV2.instance.switchicons(new MainV2.modernmenuicons());
                         break;
                     default:                                                            
                         MainV2.instance.switchicons(new MainV2.burntkermitmenuicons());     //Fall back to BurntKermit

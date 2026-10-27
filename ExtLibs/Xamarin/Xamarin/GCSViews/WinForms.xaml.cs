@@ -291,6 +291,10 @@ namespace Xamarin.GCSViews
                     files.HighContrast);
 
                 File.WriteAllText(
+                    Settings.GetUserDataDirectory() + Path.DirectorySeparatorChar + "ModernDark.mpsystheme",
+                    files.ModernDark);
+
+                File.WriteAllText(
                     Settings.GetUserDataDirectory() + Path.DirectorySeparatorChar + "ParameterMetaData.xml",
                     files.ParameterMetaDataBackup);
 

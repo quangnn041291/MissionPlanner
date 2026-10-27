@@ -645,6 +645,15 @@ namespace MissionPlanner {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to the ModernDark.mpsystheme theme.
+        /// </summary>
+        public static string ModernDark {
+            get {
+                return ResourceManager.GetString("ModernDark", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &lt;?xml version=&quot;1.0&quot;?&gt;
         ///
         ///&lt;!-- TAGS ARE CASE SENSATIVE --&gt;

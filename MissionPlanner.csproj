@@ -725,6 +725,9 @@
     <None Update="HighContrast.mpsystheme">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="ModernDark.mpsystheme">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="appxmanifest.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
