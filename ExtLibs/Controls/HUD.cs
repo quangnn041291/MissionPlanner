@@ -3755,7 +3755,16 @@ namespace MissionPlanner.Controls
 
                 float scale = 1.0f;
                 // dont draw spaces
-                if (cha != ' ')
+                if (cha != ' ' && bitmapscale != 1)
+                {
+                    // the cached letter is a bitmap at one pixel a point, blurred on a Retina screen, so
+                    // draw its outline instead
+                    graphicsObjectGDIP.TranslateTransform(x, y);
+                    graphicsObjectGDIP.DrawPath(this._p, charDict[charid].pth);
+                    graphicsObjectGDIP.FillPath(brush, charDict[charid].pth);
+                    graphicsObjectGDIP.TranslateTransform(-x, -y);
+                }
+                else if (cha != ' ')
                 {
                     DrawImage(charDict[charid].bitmap, (int) x, (int) y, charDict[charid].bitmap.Width, charDict[charid].bitmap.Height, charDict[charid].gltextureid);
                     /*

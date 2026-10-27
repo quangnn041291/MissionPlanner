@@ -1496,6 +1496,18 @@ System.ComponentModel.Description("Enables or disables the range selected by Nee
         {
         }
 
+        /// <summary>
+        /// Pixels a point in the face bitmap: on the Mac, 2 on a Retina screen
+        /// </summary>
+        private static float DeviceScale()
+        {
+#if NETSTANDARD2_0
+            return Math.Max(1f, XplatUIMine.DeviceScale);
+#else
+            return 1f;
+#endif
+        }
+
         protected override void OnPaint(PaintEventArgs pe)
         {
             if ((Width < 10) || (Height < 10))
@@ -1519,6 +1531,16 @@ System.ComponentModel.Description("Enables or disables the range selected by Nee
                 //                Console.WriteLine("Scale: " + scale);
             }
 
+            // the face is drawn into a bitmap at the screen's scale, 2 on a Retina screen on the Mac
+            var pixelscale = DeviceScale();
+            var pixelwidth = Math.Max(1, (int) Math.Ceiling(Width * pixelscale));
+            var pixelheight = Math.Max(1, (int) Math.Ceiling(Height * pixelscale));
+            if (gaugeBitmap.Width != pixelwidth || gaugeBitmap.Height != pixelheight)
+            {
+                gaugeBitmap = new Bitmap(pixelwidth, pixelheight);
+                drawGaugeBackground = true;
+            }
+
             if (drawGaugeBackground)
             {
                 drawGaugeBackground = false;
@@ -1530,6 +1552,14 @@ System.ComponentModel.Description("Enables or disables the range selected by Nee
 
                 using (Graphics ggr = Graphics.FromImage(gaugeBitmap))
                 {
+#if NETSTANDARD2_0
+                    // drawn in points, and ResetTransform comes back to that scale
+                    if (pixelscale != 1)
+                    {
+                        ggr.ScaleTransform(pixelscale, pixelscale);
+                        ggr.KeepTransformAsBase();
+                    }
+#endif
                     ggr.FillRectangle(new SolidBrush(BackColor), ClientRectangle);
 
                     if (BackgroundImage != null)
@@ -1808,7 +1838,10 @@ System.ComponentModel.Description("Enables or disables the range selected by Nee
                 }
             } // end bg
 
-            pe.Graphics.DrawImageUnscaled(gaugeBitmap, 0, 0);
+            if (pixelscale != 1)
+                pe.Graphics.DrawImage(gaugeBitmap, new Rectangle(0, 0, Width, Height));
+            else
+                pe.Graphics.DrawImageUnscaled(gaugeBitmap, 0, 0);
             pe.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             pe.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
@@ -1999,7 +2032,8 @@ System.ComponentModel.Description("Enables or disables the range selected by Nee
             }
             //this.Center = new Point(this.Width / 2, this.Width / 2);
 
-            gaugeBitmap = new Bitmap(Width, Height);
+            gaugeBitmap = new Bitmap(Math.Max(1, (int) Math.Ceiling(Width * DeviceScale())),
+                Math.Max(1, (int) Math.Ceiling(Height * DeviceScale())));
 
             drawGaugeBackground = true;
             Refresh();

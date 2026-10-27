@@ -63,6 +63,15 @@ namespace MissionPlanner.Controls
             _headingimage = new Bitmap(this.Width, this.Height);
         }
 
+        private static float DeviceScale()
+        {
+#if NETSTANDARD2_0
+            return Math.Max(1f, XplatUIMine.DeviceScale);
+#else
+            return 1f;
+#endif
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -74,10 +83,15 @@ namespace MissionPlanner.Controls
 
             if (drawnheading == false || this.DesignMode)
             {
-                _headingimage = new Bitmap(Width, Height);
+                // at the screen's scale, 2 on a Retina screen on the Mac; it is drawn at its size in points
+                var pixelscale = DeviceScale();
+                _headingimage = new Bitmap(Math.Max(1, (int) Math.Ceiling(Width * pixelscale)),
+                    Math.Max(1, (int) Math.Ceiling(Height * pixelscale)));
 
                 using (Graphics g = Graphics.FromImage(_headingimage))
                 {
+                    if (pixelscale != 1)
+                        g.ScaleTransform(pixelscale, pixelscale);
 
                     g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
                     g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bicubic;

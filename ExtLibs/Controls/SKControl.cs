@@ -48,7 +48,24 @@ namespace SkiaSharp.Views.Desktop
 
 			Draw();
 
-			e.Graphics.DrawImage(Bitmap, 0, 0);
+			// a bitmap at the screen's scale is drawn back at the control's size in points
+			if (Bitmap != null && (Bitmap.Width != Width || Bitmap.Height != Height))
+				e.Graphics.DrawImage(Bitmap, new Rectangle(0, 0, Width, Height));
+			else
+				e.Graphics.DrawImage(Bitmap, 0, 0);
+		}
+
+		/// <summary>
+		/// Pixels a point in the bitmap: on the Mac, 2 on a Retina screen, so what is painted is as sharp
+		/// as the screen
+		/// </summary>
+		private static float DeviceScale()
+		{
+#if NETSTANDARD2_0
+			return Math.Max(1f, XplatUIMine.DeviceScale);
+#else
+			return 1f;
+#endif
 		}
 
 		public void Draw()
@@ -59,11 +76,16 @@ namespace SkiaSharp.Views.Desktop
 			if (info.Width == 0 || info.Height == 0)
 				return;
 
-			var data = Bitmap.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.WriteOnly, Bitmap.PixelFormat);
+			var data = Bitmap.LockBits(new Rectangle(0, 0, info.Width, info.Height), ImageLockMode.WriteOnly, Bitmap.PixelFormat);
 
 			// create the surface
 			using (var surface = SKSurface.Create(info, data.Scan0, data.Stride))
 			{
+				// drawn in points whatever the bitmap's scale
+				var scale = (float) info.Width / Math.Max(1, Width);
+				if (scale != 1)
+					surface.Canvas.Scale(scale, scale);
+
 				// start drawing
 				OnPaintSurface(new SKPaintSurfaceEventArgs(surface, info));
 
@@ -89,7 +111,9 @@ namespace SkiaSharp.Views.Desktop
 
 		private SKImageInfo CreateBitmap()
 		{
-			var info = new SKImageInfo(Width, Height, SKImageInfo.PlatformColorType, SKAlphaType.Premul);
+			var scale = DeviceScale();
+			var info = new SKImageInfo((int) Math.Ceiling(Width * scale), (int) Math.Ceiling(Height * scale),
+				SKImageInfo.PlatformColorType, SKAlphaType.Premul);
 
 			if (Bitmap == null || Bitmap.Width != info.Width || Bitmap.Height != info.Height)
 			{
