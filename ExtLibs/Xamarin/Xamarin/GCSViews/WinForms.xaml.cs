@@ -750,9 +750,15 @@ namespace Xamarin.GCSViews
                     {
                         Instance.scale = new Forms.Size((Instance.SkCanvasView.CanvasSize.Width / Instance.size.Width),
                             (Instance.SkCanvasView.CanvasSize.Height / Instance.size.Height));
-                        // 2 on a Retina screen, so what is drawn into images is drawn with that many pixels
-                        if (Instance.scale.Width >= 1)
+                        // 2 on a Retina screen, so what is drawn into images is drawn with that many pixels.
+                        // when it changes, as on the first frame or on another screen, everything is
+                        // painted again at the new scale
+                        if (Instance.scale.Width >= 1 && (float) Instance.scale.Width != XplatUIMine.DeviceScale)
+                        {
                             XplatUIMine.DeviceScale = (float) Instance.scale.Width;
+                            foreach (Form form in Application.OpenForms.Cast<Form>().ToArray())
+                                form.BeginInvokeIfRequired(() => form.Invalidate(true));
+                        }
 
                         Screen.PrimaryScreen.WorkingArea =
                             new Rectangle(0, 0, (int) Instance.size.Width, (int) Instance.size.Height);
@@ -796,7 +802,6 @@ namespace Xamarin.GCSViews
                 var x = (int) (e.Location.X / scale.Width);
                 var y = (int) (e.Location.Y / scale.Height);
 
-                Console.WriteLine(Extensions.ToJSON(e, Formatting.None));
                 XplatUIMine.PaintPending = true;
 
                 if (e.ActionType == SKTouchAction.Moved)
@@ -848,7 +853,6 @@ namespace Xamarin.GCSViews
                             x = (int) (center.X / scale.Width);
                             y = (int) (center.Y / scale.Height);
 
-                            Console.WriteLine("scale: {0} {1} {2}", scale, newVector.Length, oldVector.Length);
                             if (scale1 >= 2)
                             {
                                 XplatUI.driver.SendMessage(IntPtr.Zero, Msg.WM_MOUSEWHEEL,

@@ -1364,7 +1364,14 @@ namespace MissionPlanner
         private void PopulateSerialportList()
         {
             var items = new List<string> {"AUTO"};
-            items.AddRange(SerialPort.GetPortNames());
+            try
+            {
+                items.AddRange(SerialPort.GetPortNames());
+            }
+            catch (Exception ex)
+            {
+                log.Error("Failed to populate serial port dropdown.", ex);
+            }
             items.Add("TCP");
             items.Add("UDP");
             items.Add("UDPCl");
@@ -3803,7 +3810,7 @@ namespace MissionPlanner
                     FlightData.BUT_playlog_Click(null, null);
                 }
                 else if (cmds.ContainsKey("file") && File.Exists(cmds["file"]) &&
-                         (cmds["file"].ToLower().EndsWith(".log") || cmds["file"].ToLower().EndsWith(".bin")))
+                         (cmds["file"].EndsWith(".log", StringComparison.OrdinalIgnoreCase) || cmds["file"].EndsWith(".bin", StringComparison.OrdinalIgnoreCase)))
                 {
                     LogBrowse logbrowse = new LogBrowse();
                     ThemeManager.ApplyThemeTo(logbrowse);
@@ -4546,8 +4553,8 @@ namespace MissionPlanner
         {
             try
             {
-                System.Diagnostics.Process.Start(
-                    "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mich146%40hotmail%2ecom&lc=AU&item_name=Michael%20Oborne&no_note=0&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHostedGuest");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                    "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=mich146%40hotmail%2ecom&lc=AU&item_name=Michael%20Oborne&no_note=0&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHostedGuest") { UseShellExecute = true });
             }
             catch
             {
@@ -4795,7 +4802,7 @@ namespace MissionPlanner
         {
             try
             {
-                System.Diagnostics.Process.Start("https://ardupilot.org/?utm_source=Menu&utm_campaign=MP");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://ardupilot.org/?utm_source=Menu&utm_campaign=MP") { UseShellExecute = true });
             }
             catch
             {

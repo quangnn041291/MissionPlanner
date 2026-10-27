@@ -109,40 +109,82 @@ public class FormsRender
 
     public static bool DrawOntoCanvas(IntPtr handle, SKCanvas Canvas, bool forcerender = false)
     {
-        var hwnd = Hwnd.ObjectFromHandle(handle);
+        // one pass over the window table per call, instead of a scan of it for every window drawn
+        var children = VisibleChildren();
+        DrawWindow(Hwnd.ObjectFromHandle(handle), Canvas, forcerender, children);
+        return true;
+    }
 
+    /// <summary>
+    /// Mapped, visible client windows grouped by parent, each group in z-order (stable, so windows
+    /// in the same z band keep the window table's order, as before).
+    /// </summary>
+    static Dictionary<Hwnd, List<Hwnd>> VisibleChildren()
+    {
+        var children = new Dictionary<Hwnd, List<Hwnd>>();
+        lock (Hwnd.windows)
+        {
+            foreach (DictionaryEntry entry in Hwnd.windows)
+            {
+                var child = (Hwnd)entry.Value;
+                if ((IntPtr)entry.Key != child.ClientWindow || child.Parent == null || !child.Visible ||
+                    !child.Mapped || child.zombie)
+                    continue;
+                if (!children.TryGetValue(child.Parent, out var list))
+                    children[child.Parent] = list = new List<Hwnd>();
+                list.Add(child);
+            }
+        }
+
+        foreach (var list in children.Values)
+            if (list.Count > 1)
+                StableSortByZOrder(list);
+        return children;
+    }
+
+    static void StableSortByZOrder(List<Hwnd> list)
+    {
+        var keys = new int[list.Count];
+        for (int i = 0; i < list.Count; i++)
+        {
+            var info = XplatUIMine.GetInstance().GetZOrder(list[i].client_window);
+            keys[i] = info.top ? 1000 : info.bottom ? 0 : 500;
+        }
+
+        // insertion sort: stable, and the lists are short
+        for (int i = 1; i < list.Count; i++)
+        {
+            var hwnd = list[i];
+            var key = keys[i];
+            int j = i - 1;
+            while (j >= 0 && keys[j] > key)
+            {
+                list[j + 1] = list[j];
+                keys[j + 1] = keys[j];
+                j--;
+            }
+            list[j + 1] = hwnd;
+            keys[j + 1] = key;
+        }
+    }
+
+    // a window's client image is painted at the screen's scale (XplatUIMine.DeviceScale), 2 on a
+    // Retina screen, so place it by its size in points
+    static void DrawClientImage(SKCanvas canvas, SKImage image, float x, float y)
+    {
+        var scale = Math.Max(1f, XplatUIMine.DeviceScale);
+        canvas.DrawImage(image, SKRect.Create(x, y, image.Width / scale, image.Height / scale));
+    }
+
+    static void DrawWindow(Hwnd hwnd, SKCanvas Canvas, bool forcerender, Dictionary<Hwnd, List<Hwnd>> children)
+    {
         var x = 0;
         var y = 0;
-        var wasdrawn = false;
 
         XplatUI.driver.ClientToScreen(hwnd.client_window, ref x, ref y);
 
-        var width = 0;
-        var height = 0;
-        var client_width = 0;
-        var client_height = 0;
-
-
         if (hwnd.hwndbmp != null && hwnd.Mapped && hwnd.Visible && !hwnd.zombie)
         {
-            // setup clip
-            var parent = hwnd;
-           /* Canvas.ClipRect(
-                SKRect.Create(0, 0, Screen.PrimaryScreen.Bounds.Width * 2,
-                    Screen.PrimaryScreen.Bounds.Height * 2), (SKClipOperation)5);
-           */
-            while (parent != null)
-            {
-                var xp = 0;
-                var yp = 0;
-                XplatUI.driver.ClientToScreen(parent.client_window, ref xp, ref yp);
-
-             /*   Canvas.ClipRect(SKRect.Create(xp, yp, parent.Width, parent.Height),
-                    SKClipOperation.Intersect);
-             */
-                parent = parent.Parent;
-            }
-
             Monitor.Enter(XplatUIMine.paintlock);
             try
             {
@@ -155,11 +197,13 @@ public class FormsRender
                     if (frm != null)
                     {
                         borders = Hwnd.GetBorders(frm.GetCreateParams(), null);
-                        /*
-                        Canvas.ClipRect(
-                            SKRect.Create(0, 0, Screen.PrimaryScreen.Bounds.Width * 2,
-                                Screen.PrimaryScreen.Bounds.Height * 2), (SKClipOperation)5);
-                        */
+                    }
+                    else
+                    {
+                        // a control's border image covers its whole window, which starts this far
+                        // before its client area
+                        borders.left = hwnd.ClientRect.X;
+                        borders.top = hwnd.ClientRect.Y;
                     }
 
                     if (Canvas.DeviceClipBounds.Width > 0 &&
@@ -171,16 +215,9 @@ public class FormsRender
                             if (hwnd.hwndbmpNC != null)
                                 Canvas.DrawImage(hwnd.hwndbmpNC,
                                     SKRect.Create(x - borders.left, y - borders.top, hwnd.width, hwnd.height), paint);
-                            /*
-                            Canvas.ClipRect(
-                                SKRect.Create(x, y, hwnd.width - borders.right - borders.left,
-                                    hwnd.height - borders.top - borders.bottom), SKClipOperation.Intersect);
-                            */
                             if (hwnd.hwndbmp != null)
-                                Canvas.DrawDrawable(hwnd.hwndbmp,
-                                    new SKPoint(x, y));
+                                DrawClientImage(Canvas, hwnd.hwndbmp, x, y);
 
-                            wasdrawn = true;
                             // we needed to draw this, so everything after this is forced to render
                             forcerender = true;
                         }
@@ -189,7 +226,7 @@ public class FormsRender
                     }
                     else
                     {
-                        return true;
+                        return;
                     }
                 }
                 else
@@ -200,96 +237,61 @@ public class FormsRender
                         if (hwnd.DrawNeeded || forcerender)
                         {
                             if (hwnd.hwndbmp != null)
-                                Canvas.DrawDrawable(hwnd.hwndbmp,
-                                    new SKPoint(x + 0, y + 0));
+                                DrawClientImage(Canvas, hwnd.hwndbmp, x, y);
 
-                            wasdrawn = true;
                             // we needed to draw this, so everything after this is forced to render
                             forcerender = true;
                         }
 
                         hwnd.DrawNeeded = false;
-                        /*
-                                                surface.Canvas.DrawText(Control.FromHandle(hwnd.ClientWindow).Name,
-                                                    new SKPoint(x, y + 15),
-                                                    new SKPaint() {Color = SKColor.Parse("55ffff00")});
-                                                /*surface.Canvas.DrawText(hwnd.ClientWindow.ToString(), new SKPoint(x,y+15),
-                                                    new SKPaint() {Color = SKColor.Parse("ffff00")});*/
-
                     }
                     else
                     {
-                        return true;
+                        return;
                     }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
-                return true;
+                return;
             }
             finally
             {
                 Monitor.Exit(XplatUIMine.paintlock);
             }
         }
-        /*
-        var ctrl = Control.FromHandle(hwnd.ClientWindow);
 
-        Canvas.DrawText(x + " " + y + " " + ctrl.Name + " " + hwnd.width + " " + hwnd.Height, x, y + 10,
-            new SKPaint() { Color = SKColors.Red });
-        */
-        if (hwnd.Mapped && hwnd.Visible)
+        if (hwnd.Mapped && hwnd.Visible && children.TryGetValue(hwnd, out var list))
         {
-            IEnumerable<Hwnd> children;
-            lock (Hwnd.windows)
-                children = Hwnd.windows.OfType<System.Collections.DictionaryEntry>()
-                    .Where(hwnd2 =>
-                    {
-                        var Key = (IntPtr)hwnd2.Key;
-                        var Value = (Hwnd)hwnd2.Value;
-                        if (Value.ClientWindow == Key && Value.Parent == hwnd && Value.Visible &&
-                            Value.Mapped && !Value.zombie)
-                            return true;
-                        return false;
-                    }).Select(a => (Hwnd)a.Value).ToArray();
-
-            children = children.OrderBy((hwnd2) =>
-            {
-                var info = XplatUIMine.GetInstance().GetZOrder(hwnd2.client_window);
-                if (info.top)
-                    return 1000;
-                if (info.bottom)
-                    return 0;
-                return 500;
-
-            });
-
-            // a child is cut off at its parent, as when a scrolled panel pushes its controls past its edge.
-            // that is the client area of a form, so they do not draw over its title bar, but the whole
-            // window of a maximised form, as its client area is not kept to the pixel
-            var clip = SKRect.Create(x - hwnd.ClientRect.X, y - hwnd.ClientRect.Y, hwnd.Width, hwnd.Height);
+            // children are clipped to this window's client area, and skipped when outside the clip
+            var client = hwnd.ClientRect;
+            var clip = SKRect.Create(x, y, client.Width, client.Height);
+            // but the whole window of a maximised form, as its client area is not kept to the pixel
             if (hwnd.ClientWindow != hwnd.WholeWindow)
             {
                 var form = Control.FromHandle(hwnd.ClientWindow) as Form;
-                if (form != null && form.WindowState != FormWindowState.Maximized)
-                    clip = SKRect.Create(x, y, hwnd.ClientRect.Width, hwnd.ClientRect.Height);
+                if (form != null && form.WindowState == FormWindowState.Maximized)
+                    clip = SKRect.Create(x - client.X, y - client.Y, hwnd.Width, hwnd.Height);
             }
 
             Canvas.Save();
             Canvas.ClipRect(clip);
+            var visible = Canvas.LocalClipBounds;
 
-            foreach (var child in children)
+            foreach (var child in list)
             {
-                DrawOntoCanvas(child.ClientWindow, Canvas, forcerender);
+                var cx = 0;
+                var cy = 0;
+                XplatUI.driver.ClientToScreen(child.client_window, ref cx, ref cy);
+                if (!visible.IntersectsWith(SKRect.Create(cx, cy, child.Width, child.Height)))
+                    continue;
+                DrawWindow(child, Canvas, forcerender, children);
             }
 
             Canvas.Restore();
         }
-
-        return true;
     }
-
 }
 
 namespace tlogThumbnailHandler

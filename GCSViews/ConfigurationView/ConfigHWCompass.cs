@@ -267,7 +267,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             try
             {
                 //System.Diagnostics.Process.Start("http://www.ngdc.noaa.gov/geomagmodels/Declination.jsp");
-                Process.Start("http://www.magnetic-declination.com/");
+                Process.Start(new ProcessStartInfo("http://www.magnetic-declination.com/") { UseShellExecute = true });
             }
             catch
             {
@@ -411,7 +411,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             try
             {
-                Process.Start("https://www.youtube.com/watch?v=DmsueBS0J3E");
+                Process.Start(new ProcessStartInfo("https://www.youtube.com/watch?v=DmsueBS0J3E") { UseShellExecute = true });
             }
             catch
             {

@@ -567,22 +567,19 @@ index f55b0e192b..80dcda1017 100644
  
  			/// Make sure that we aren't drawing one more line then we need to
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
-index e2a43c3f25..49fa79db8b 100644
+index 1afec18538..27f6b8f770 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
-@@ -100,8 +100,10 @@ public ThemeWin32Classic ()
+@@ -100,6 +100,8 @@ public ThemeWin32Classic ()
  			string_format_menu_menubar_text.HotkeyPrefix = HotkeyPrefix.Show;
  		}
  
 +		// what a control draws is recorded and drawn at the screen's own scale, which is already free of
 +		// flicker; a back buffer would be a bitmap at one pixel a point, blurred on a Retina screen
  		public override bool DoubleBufferingSupported {
--			get {return true; }
-+			get {return false; }
- 		}
- 
- 		public override int HorizontalScrollBarHeight {
-@@ -1573,6 +1575,13 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
+ 			// XplatUIMine paints each window into its own retained surface and only shows it once the
+ 			// paint has finished, so a control-level back buffer is a second full-size bitmap and an
+@@ -1576,6 +1578,13 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
  			StringFormat string_format = new StringFormat ();
  			string_format.FormatFlags = StringFormatFlags.LineLimit | StringFormatFlags.NoWrap;
  
@@ -596,7 +593,7 @@ index e2a43c3f25..49fa79db8b 100644
  			if ((e.State & DrawItemState.Selected) == DrawItemState.Selected) {
  				back_color = ColorHighlight;
  				fore_color = ColorHighlightText;
-@@ -1593,9 +1602,7 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
+@@ -1596,9 +1605,7 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
  					text_draw, string_format);
  			}
  			
@@ -607,7 +604,7 @@ index e2a43c3f25..49fa79db8b 100644
  
  			string_format.Dispose ();
  		}
-@@ -1666,7 +1673,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
+@@ -1669,7 +1676,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
  		public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rectangle clippingArea, FlatStyle style)
  		{
  			if (!comboBox.Enabled)
@@ -616,7 +613,7 @@ index e2a43c3f25..49fa79db8b 100644
  
  			if (comboBox.DropDownStyle == ComboBoxStyle.Simple)
  				g.FillRectangle (ResPool.GetSolidBrush (comboBox.Parent.BackColor), comboBox.ClientRectangle);
-@@ -1680,7 +1687,7 @@ public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rect
+@@ -1683,7 +1690,7 @@ public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rect
  			}
  			bool is_flat = style == FlatStyle.Flat || style == FlatStyle.Popup;
  			if (!is_flat && clippingArea.IntersectsWith (comboBox.TextArea))
@@ -625,7 +622,7 @@ index e2a43c3f25..49fa79db8b 100644
  		}
  		public override bool CombBoxBackgroundHasHotElementStyle (ComboBox comboBox)
  		{
-@@ -4655,6 +4662,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4658,6 +4665,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  			Rectangle	first_arrow_area;
  			Rectangle	second_arrow_area;			
  			Rectangle	thumb_pos;
@@ -635,7 +632,7 @@ index e2a43c3f25..49fa79db8b 100644
  			
  			thumb_pos = bar.ThumbPos;
  
-@@ -4668,30 +4678,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4671,30 +4681,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Width = bar.Width;
  				bar.ThumbPos = thumb_pos;
  
@@ -670,7 +667,7 @@ index e2a43c3f25..49fa79db8b 100644
  			} else {
  				first_arrow_area = new Rectangle(0, 0, scrollbutton_width, bar.Height);
  				bar.FirstArrowArea = first_arrow_area;
-@@ -4702,30 +4703,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4705,30 +4706,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Height = bar.Height;
  				bar.ThumbPos = thumb_pos;
  
@@ -705,7 +702,7 @@ index e2a43c3f25..49fa79db8b 100644
  			}
  
  			/* Thumb */
-@@ -4734,8 +4726,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4737,8 +4729,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  
  		protected virtual void ScrollBar_DrawThumb(ScrollBar bar, Rectangle thumb_pos, Rectangle clip, Graphics dc)
  		{
@@ -729,7 +726,7 @@ index e2a43c3f25..49fa79db8b 100644
  		}
  
  		public override int ScrollBarButtonSize {
-@@ -6225,51 +6230,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
+@@ -6228,51 +6233,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
  			}
  		}
  
@@ -793,7 +790,7 @@ index e2a43c3f25..49fa79db8b 100644
  						tbheight + bdwidth - 1, form.Width - bdwidth - 1,
  						tbheight + bdwidth - 1);
  			return tb;
-@@ -6284,6 +6266,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6287,6 +6269,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  			Rectangle tb = ManagedWindowDrawTitleBarAndBorders (dc, clip, wm);
  
  			Form form = wm.Form;
@@ -805,7 +802,7 @@ index e2a43c3f25..49fa79db8b 100644
  			if (wm.ShowIcon) {
  				Rectangle icon = ManagedWindowGetTitleBarIconArea (wm);
  				if (icon.IntersectsWith (clip))
-@@ -6308,9 +6295,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6311,9 +6298,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  				format.Trimming = StringTrimming.EllipsisCharacter;
  				format.LineAlignment = StringAlignment.Center;
  
@@ -820,7 +817,7 @@ index e2a43c3f25..49fa79db8b 100644
  						tb, format);
  			}
  		}
-@@ -6345,10 +6336,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
+@@ -6348,10 +6339,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
  
  		protected virtual void ManagedWindowDrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Form form)
  		{
@@ -887,7 +884,7 @@ index e2a43c3f25..49fa79db8b 100644
  		}
  
  		public override Rectangle ManagedWindowGetTitleBarIconArea (InternalWindowManager wm)
-@@ -6367,7 +6411,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
+@@ -6370,7 +6414,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
  
  		public override bool ManagedWindowTitleButtonHasHotElementStyle (TitleButton button, Form form)
  		{
@@ -897,7 +894,7 @@ index e2a43c3f25..49fa79db8b 100644
  		}
  
  		public override void ManagedWindowDrawMenuButton (Graphics dc, TitleButton button, Rectangle clip, InternalWindowManager wm)
-@@ -6403,16 +6448,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
+@@ -6406,16 +6451,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
  			DrawBorderInternal(graphics, bounds.Left, bounds.Bottom-1, bounds.Right-1, bounds.Bottom-1, bottomWidth, bottomColor, bottomStyle, Border3DSide.Bottom);
  		}
  
@@ -1006,7 +1003,7 @@ index e2a43c3f25..49fa79db8b 100644
  			Rectangle	rect= new Rectangle (rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
  			bool is_ColorControl = control_color.ToArgb () == ColorControl.ToArgb () ? true : false;
  			
-@@ -6423,82 +6556,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
+@@ -6426,82 +6559,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
  				rect.Height += 4;
  			}
  			
@@ -1129,7 +1126,7 @@ index 792cc9dbf8..089c7fded8 100644
  
  			private void tmrRepeat_Tick (object sender, EventArgs e)
 diff --git a/mcs/class/System.Windows.Forms/xplatuimine.cs b/mcs/class/System.Windows.Forms/xplatuimine.cs
-index 6433ae217f..db1915dc85 100644
+index e4c9936890..61ba79c306 100644
 --- a/mcs/class/System.Windows.Forms/xplatuimine.cs
 +++ b/mcs/class/System.Windows.Forms/xplatuimine.cs
 @@ -116,6 +116,13 @@ public override Screen[] AllScreens
@@ -1146,7 +1143,7 @@ index 6433ae217f..db1915dc85 100644
      internal static Rectangle grab_area;
      internal static WndProc wnd_proc;
      internal static IntPtr prev_mouse_hwnd;
-@@ -365,6 +372,13 @@ public override IntPtr CreateWindow(CreateParams cp)
+@@ -364,6 +371,13 @@ public override IntPtr CreateWindow(CreateParams cp)
          return hwnd.zombie ? IntPtr.Zero : hwnd.Handle;
      }
  
@@ -1160,48 +1157,66 @@ index 6433ae217f..db1915dc85 100644
      internal static Size TranslateWindowSizeToXWindowSize(CreateParams cp)
      {
          return TranslateWindowSizeToXWindowSize(cp, new Size(cp.Width, cp.Height));
-@@ -1670,7 +1684,11 @@ public override void PaintEventEnd(ref Message msg, IntPtr handle, bool client,
+@@ -1591,9 +1605,14 @@ public override PaintEventArgs PaintEventStart(ref Message msg, IntPtr handle, b
+ 
+             // draw into the window's retained surface, clipped to the invalid area; what is outside it
+             // stays as last painted (this used to re-record the whole previous paint inside each new one)
+-            var surface = paint_hwnd.GetPaintSurface(hwnd.ClientRect.Width, hwnd.ClientRect.Height);
++            // at the screen's scale, 2 on a Retina screen, with the canvas scaled to match, so what is
++            // painted is as sharp as the screen. the compositor draws it back at its size in points
++            var scale = Math.Max(1f, DeviceScale);
++            var surface = paint_hwnd.GetPaintSurface((int) Math.Ceiling(hwnd.ClientRect.Width * scale),
++                (int) Math.Ceiling(hwnd.ClientRect.Height * scale));
+             var newcanvas = surface.Canvas;
+             paint_hwnd.paintSaveCount = newcanvas.Save();
++            newcanvas.Scale(scale, scale);
+ 
+             // a region clip is in device space, so it would ignore the scale and offset the window is drawn with
+             newcanvas.ClipPath(clip_region.GetBoundaryPath());
+@@ -1673,7 +1692,11 @@ public override void PaintEventEnd(ref Message msg, IntPtr handle, bool client,
          }
          else
          {
--            hwnd.hwndbmpNC = SKImage.FromPicture(((SKPictureRecorder) pevent.Tag).EndRecording(),                new SKSizeI(hwnd.width, hwnd.height));
+-            var nc = SKImage.FromPicture(((SKPictureRecorder) pevent.Tag).EndRecording(),                new SKSizeI(hwnd.width, hwnd.height));
 +            // at the screen's scale, so a window's frame and title bar are as sharp as what they hold
 +            var scale = Math.Max(1f, DeviceScale);
-+            hwnd.hwndbmpNC = SKImage.FromPicture(((SKPictureRecorder) pevent.Tag).EndRecording(),
++            var nc = SKImage.FromPicture(((SKPictureRecorder) pevent.Tag).EndRecording(),
 +                new SKSizeI((int) Math.Ceiling(hwnd.width * scale), (int) Math.Ceiling(hwnd.height * scale)),
 +                SKMatrix.CreateScale(scale, scale));
+             lock (paintlock)
+                 hwnd.hwndbmpNC = nc;
+         }
+@@ -2329,21 +2352,22 @@ void DrawWindowBorder(Hwnd hwnd)
+             return;
          }
  
-         //Console.WriteLine("PaintEventEnd " + XplatUI.Window(handle) + " th: " + Thread.CurrentThread.Name + " " + hwnd.hwndbmp);
-@@ -2552,12 +2570,9 @@ public override bool GetMessage(object queue_id, ref MSG msg, IntPtr hWnd, int w
-                                         Graphics g;
- 
-                                         g = Graphics.FromSKImage(hwnd.hwndbmpNC);
--                                        if (hwnd.border_static)
--                                            ControlPaint.DrawBorder3D(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
--                                                Border3DStyle.SunkenOuter);
--                                        else
--                                            ControlPaint.DrawBorder3D(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
--                                                Border3DStyle.Sunken);
-+                                        // flat look: a thin line in a shade of the control's colour
-+                                        ThemeEngine.Current.CPDrawBorder3D(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
-+                                            Border3DStyle.Flat, Border3DSide.All, BorderBackColor(hwnd));
-                                         g.Dispose();
-                                         break;
-                                     }
-@@ -2567,9 +2582,8 @@ public override bool GetMessage(object queue_id, ref MSG msg, IntPtr hWnd, int w
-                                         Graphics g;
- 
-                                         g = Graphics.FromSKImage(hwnd.hwndbmpNC);
--                                        ControlPaint.DrawBorder(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
--                                            Color.Black,
--                                            ButtonBorderStyle.Solid);
-+                                        ThemeEngine.Current.CPDrawBorder3D(g, new Rectangle(0, 0, hwnd.Width, hwnd.Height),
-+                                            Border3DStyle.Flat, Border3DSide.All, BorderBackColor(hwnd));
-                                         g.Dispose();
-                                         break;
-                                     }
-@@ -3773,6 +3787,18 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
+-        var width = Math.Max(1, hwnd.Width);
+-        var height = Math.Max(1, hwnd.Height);
++        // at the screen's scale, so the line is as sharp as what it borders
++        var scale = Math.Max(1f, DeviceScale);
++        var width = Math.Max(1, (int) Math.Ceiling(hwnd.Width * scale));
++        var height = Math.Max(1, (int) Math.Ceiling(hwnd.Height * scale));
+         SKImage image;
+         using (var surface = SKSurface.Create(new SKImageInfo(width, height, SKImageInfo.PlatformColorType,
+                    SKAlphaType.Premul)))
+         {
+             surface.Canvas.Clear(SKColors.Transparent);
++            surface.Canvas.Scale(scale, scale);
+             using (var g = Graphics.FromCanvas(surface.Canvas))
+             {
++                // flat look: a thin line in a shade of the control's colour, for either style
+                 var rect = new Rectangle(0, 0, hwnd.Width, hwnd.Height);
+-                if (border == FormBorderStyle.Fixed3D)
+-                    ControlPaint.DrawBorder3D(g, rect,
+-                        hwnd.border_static ? Border3DStyle.SunkenOuter : Border3DStyle.Sunken);
+-                else
+-                    ControlPaint.DrawBorder(g, rect, Color.Black, ButtonBorderStyle.Solid);
++                ThemeEngine.Current.CPDrawBorder3D(g, rect, Border3DStyle.Flat, Border3DSide.All,
++                    BorderBackColor(hwnd));
+             }
+             image = surface.Snapshot();
+         }
+@@ -3820,6 +3844,18 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
                  mouse_position.X = x;
                  mouse_position.Y = y;
  
