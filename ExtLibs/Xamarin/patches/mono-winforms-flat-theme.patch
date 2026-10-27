@@ -380,7 +380,7 @@ index 7daef6d5ac..f2ece3aa5d 100644
  				focus_rect.Inflate (-2, -2);
  				ThemeEngine.Current.CPDrawFocusRectangle (dc, focus_rect, tab.BackColor, tab.ForeColor);
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
-index 9196210f8f..f7b2ef86be 100644
+index 9196210f8f..800e6d011a 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
 @@ -1472,14 +1472,9 @@ internal void Draw (Rectangle clip, Graphics dc)
@@ -400,6 +400,90 @@ index 9196210f8f..f7b2ef86be 100644
 +					(current_state & ButtonState.Pushed) != 0 ? 12 : 0, is_enabled, BackColor, ForeColor);
  			}
  		}
+ 
+@@ -2460,6 +2455,19 @@ protected override CreateParams CreateParams
+ 			}
+ 
+ 			internal override bool ActivateOnShow { get { return false; } }
++
++			// flat look: rows of the list are taller than the items they show, so the text has room
++			// around it. owner drawn lists keep the height their owner gives
++			const int FlatRowPadding = 6;
++
++			int RowHeight {
++				get { return owner.ItemHeight + (owner.DrawMode == DrawMode.Normal ? FlatRowPadding : 0); }
++			}
++
++			int RowHeightAt (int index)
++			{
++				return owner.GetItemHeight (index) + (owner.DrawMode == DrawMode.Normal ? FlatRowPadding : 0);
++			}
+ 			#region Private Methods
+ 
+ 			// Calcs the listbox area
+@@ -2472,7 +2480,7 @@ internal void CalcListBoxArea ()
+ 					Rectangle area = owner.listbox_area;
+ 					width = area.Width;
+ 					height = area.Height;
+-					show_scrollbar = owner.Items.Count * owner.ItemHeight > height;
++					show_scrollbar = owner.Items.Count * RowHeight > height;
+ 
+ 					// No calculation needed
+ 					if (height <= 0 || width <= 0)
+@@ -2487,24 +2495,24 @@ internal void CalcListBoxArea ()
+ 					if (owner.DrawMode == DrawMode.OwnerDrawVariable) {
+ 						height = 0;
+ 						for (int i = 0; i < visible_items_count; i++) {
+-							height += owner.GetItemHeight (i);
++							height += RowHeightAt (i);
+ 						}
+ 
+ 						show_scrollbar = owner.Items.Count > owner.MaxDropDownItems;
+ 						
+ 					} else	{
+ 						if (owner.DropDownHeight == default_drop_down_height) { // ignore DropDownHeight
+-							height = owner.ItemHeight * visible_items_count;
++							height = RowHeight * visible_items_count;
+ 							show_scrollbar = owner.Items.Count > owner.MaxDropDownItems;
+ 						} else {
+ 							// ignore visible items count, and use manual height instead
+ 							height = owner.DropDownHeight;
+-							show_scrollbar = (owner.Items.Count * owner.ItemHeight) > height;
++							show_scrollbar = (owner.Items.Count * RowHeight) > height;
+ 						}
+ 					}
+ 				}
+ 				
+-				page_size = Math.Max (height / owner.ItemHeight, 1);
++				page_size = Math.Max (height / RowHeight, 1);
+ 
+ 				ComboBoxStyle dropdown_style = owner.DropDownStyle;
+ 				if (!show_scrollbar) {
+@@ -2518,7 +2526,7 @@ internal void CalcListBoxArea ()
+ 						top_item = 0;
+ 					}
+ 					if (dropdown_style != ComboBoxStyle.Simple)
+-						height = owner.ItemHeight * owner.items.Count;
++						height = RowHeight * owner.items.Count;
+ 				} else {
+ 					/* Need vertical scrollbar */
+ 					if (vscrollbar_ctrl == null) {
+@@ -2619,14 +2627,14 @@ private Rectangle GetItemDisplayRectangle (int index, int top_index)
+ 					throw new  ArgumentOutOfRangeException ("GetItemRectangle index out of range.");
+ 
+ 				Rectangle item_rect = new Rectangle ();
+-				int height = owner.GetItemHeight (index);
++				int height = RowHeightAt (index);
+ 
+ 				item_rect.X = 0;
+ 				item_rect.Width = textarea_drawable.Width;
+ 				if (owner.DrawMode == DrawMode.OwnerDrawVariable) {
+ 					item_rect.Y = 0;
+ 					for (int i = top_index; i < index; i++)
+-						item_rect.Y += owner.GetItemHeight (i);
++						item_rect.Y += RowHeightAt (i);
+ 				} else
+ 					item_rect.Y = height * (index - top_index);
  
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
 index 7ae80d6393..c28b5f52f1 100644
@@ -483,7 +567,7 @@ index f55b0e192b..80dcda1017 100644
  
  			/// Make sure that we aren't drawing one more line then we need to
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
-index e2a43c3f25..2cfb4f1ee9 100644
+index e2a43c3f25..49fa79db8b 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 @@ -100,8 +100,10 @@ public ThemeWin32Classic ()
@@ -498,7 +582,32 @@ index e2a43c3f25..2cfb4f1ee9 100644
  		}
  
  		public override int HorizontalScrollBarHeight {
-@@ -1666,7 +1668,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
+@@ -1573,6 +1575,13 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
+ 			StringFormat string_format = new StringFormat ();
+ 			string_format.FormatFlags = StringFormatFlags.LineLimit | StringFormatFlags.NoWrap;
+ 
++			// flat look: the text sits in from the left, more so in the drop down list, and in the
++			// middle of its row
++			int indent = (e.State & DrawItemState.ComboBoxEdit) != 0 ? 4 : 8;
++			text_draw.X += indent;
++			text_draw.Width -= indent;
++			string_format.LineAlignment = StringAlignment.Center;
++
+ 			if ((e.State & DrawItemState.Selected) == DrawItemState.Selected) {
+ 				back_color = ColorHighlight;
+ 				fore_color = ColorHighlightText;
+@@ -1593,9 +1602,7 @@ public override void DrawComboBoxItem (ComboBox ctrl, DrawItemEventArgs e)
+ 					text_draw, string_format);
+ 			}
+ 			
+-			if ((e.State & DrawItemState.Focus) == DrawItemState.Focus) {
+-				CPDrawFocusRectangle (e.Graphics, e.Bounds, fore_color, back_color);
+-			}
++			// flat look: the highlight marks the item, without a dotted focus box
+ 
+ 			string_format.Dispose ();
+ 		}
+@@ -1666,7 +1673,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
  		public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rectangle clippingArea, FlatStyle style)
  		{
  			if (!comboBox.Enabled)
@@ -507,7 +616,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  
  			if (comboBox.DropDownStyle == ComboBoxStyle.Simple)
  				g.FillRectangle (ResPool.GetSolidBrush (comboBox.Parent.BackColor), comboBox.ClientRectangle);
-@@ -1680,7 +1682,7 @@ public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rect
+@@ -1680,7 +1687,7 @@ public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rect
  			}
  			bool is_flat = style == FlatStyle.Flat || style == FlatStyle.Popup;
  			if (!is_flat && clippingArea.IntersectsWith (comboBox.TextArea))
@@ -516,7 +625,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  		}
  		public override bool CombBoxBackgroundHasHotElementStyle (ComboBox comboBox)
  		{
-@@ -4655,6 +4657,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4655,6 +4662,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  			Rectangle	first_arrow_area;
  			Rectangle	second_arrow_area;			
  			Rectangle	thumb_pos;
@@ -526,7 +635,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  			
  			thumb_pos = bar.ThumbPos;
  
-@@ -4668,30 +4673,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4668,30 +4678,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Width = bar.Width;
  				bar.ThumbPos = thumb_pos;
  
@@ -561,7 +670,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  			} else {
  				first_arrow_area = new Rectangle(0, 0, scrollbutton_width, bar.Height);
  				bar.FirstArrowArea = first_arrow_area;
-@@ -4702,30 +4698,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4702,30 +4703,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Height = bar.Height;
  				bar.ThumbPos = thumb_pos;
  
@@ -596,7 +705,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  			}
  
  			/* Thumb */
-@@ -4734,8 +4721,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4734,8 +4726,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  
  		protected virtual void ScrollBar_DrawThumb(ScrollBar bar, Rectangle thumb_pos, Rectangle clip, Graphics dc)
  		{
@@ -620,7 +729,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  		}
  
  		public override int ScrollBarButtonSize {
-@@ -6225,51 +6225,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
+@@ -6225,51 +6230,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
  			}
  		}
  
@@ -639,7 +748,8 @@ index e2a43c3f25..2cfb4f1ee9 100644
 -			Color titlebar_color2 = Color.FromArgb (255, 166, 202, 240);
 -			Color color = ThemeEngine.Current.ColorControlDark;
 -			Color color2 = Color.FromArgb (255, 192, 192, 192);
--
++			Color frame = ManagedWindowFrameColor (form);
+ 
 -			Pen pen = ResPool.GetPen (ColorControl);
 -			Rectangle borders = new Rectangle (0, 0, form.Width, form.Height);
 -			ControlPaint.DrawBorder3D (dc, borders, Border3DStyle.Raised);
@@ -649,8 +759,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
 -				dc.DrawRectangle (pen, borders);
 -				borders.Inflate (-1, -1);
 -			}				
-+			Color frame = ManagedWindowFrameColor (form);
- 
+-
 -
 -			bool draw_titlebar_enabled = false;
 -			if (wm.Form.Parent != null && wm.Form.Parent is Form) {
@@ -684,7 +793,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  						tbheight + bdwidth - 1, form.Width - bdwidth - 1,
  						tbheight + bdwidth - 1);
  			return tb;
-@@ -6284,6 +6261,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6284,6 +6266,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  			Rectangle tb = ManagedWindowDrawTitleBarAndBorders (dc, clip, wm);
  
  			Form form = wm.Form;
@@ -696,7 +805,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  			if (wm.ShowIcon) {
  				Rectangle icon = ManagedWindowGetTitleBarIconArea (wm);
  				if (icon.IntersectsWith (clip))
-@@ -6308,9 +6290,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6308,9 +6295,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  				format.Trimming = StringTrimming.EllipsisCharacter;
  				format.LineAlignment = StringAlignment.Center;
  
@@ -711,7 +820,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  						tb, format);
  			}
  		}
-@@ -6345,10 +6331,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
+@@ -6345,10 +6336,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
  
  		protected virtual void ManagedWindowDrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Form form)
  		{
@@ -778,7 +887,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  		}
  
  		public override Rectangle ManagedWindowGetTitleBarIconArea (InternalWindowManager wm)
-@@ -6367,7 +6406,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
+@@ -6367,7 +6411,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
  
  		public override bool ManagedWindowTitleButtonHasHotElementStyle (TitleButton button, Form form)
  		{
@@ -788,7 +897,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  		}
  
  		public override void ManagedWindowDrawMenuButton (Graphics dc, TitleButton button, Rectangle clip, InternalWindowManager wm)
-@@ -6403,16 +6443,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
+@@ -6403,16 +6448,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
  			DrawBorderInternal(graphics, bounds.Left, bounds.Bottom-1, bounds.Right-1, bounds.Bottom-1, bottomWidth, bottomColor, bottomStyle, Border3DSide.Bottom);
  		}
  
@@ -897,7 +1006,7 @@ index e2a43c3f25..2cfb4f1ee9 100644
  			Rectangle	rect= new Rectangle (rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
  			bool is_ColorControl = control_color.ToArgb () == ColorControl.ToArgb () ? true : false;
  			
-@@ -6423,82 +6551,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
+@@ -6423,82 +6556,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
  				rect.Height += 4;
  			}
  			
