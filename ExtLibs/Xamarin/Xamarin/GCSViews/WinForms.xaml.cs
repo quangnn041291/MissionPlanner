@@ -750,6 +750,9 @@ namespace Xamarin.GCSViews
                     {
                         Instance.scale = new Forms.Size((Instance.SkCanvasView.CanvasSize.Width / Instance.size.Width),
                             (Instance.SkCanvasView.CanvasSize.Height / Instance.size.Height));
+                        // 2 on a Retina screen, so what is drawn into images is drawn with that many pixels
+                        if (Instance.scale.Width >= 1)
+                            XplatUIMine.DeviceScale = (float) Instance.scale.Width;
 
                         Screen.PrimaryScreen.WorkingArea =
                             new Rectangle(0, 0, (int) Instance.size.Width, (int) Instance.size.Height);

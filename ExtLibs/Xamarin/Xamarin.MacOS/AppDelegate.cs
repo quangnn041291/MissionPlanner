@@ -311,6 +311,30 @@ namespace Xamarin.MacOS
             Forms.Forms.Init();
             LoadApplication(new Xamarin.App());// new App());
             base.DidFinishLaunching(notification);
+
+            // the screen is drawn into an OpenGL view, which renders at one pixel per point unless asked
+            // for more, and then a Retina screen magnifies it. the view is made as the page loads, so look
+            // for it for a few seconds
+            var tries = 0;
+            NSTimer.CreateRepeatingScheduledTimer(0.5, timer =>
+            {
+                UseBestResolution(mainWindow.ContentView);
+                if (++tries >= 20)
+                    timer.Invalidate();
+            });
+        }
+
+        private static void UseBestResolution(NSView view)
+        {
+            if (view == null)
+                return;
+            if (view is NSOpenGLView && !view.WantsBestResolutionOpenGLSurface)
+            {
+                view.WantsBestResolutionOpenGLSurface = true;
+                view.NeedsDisplay = true;
+            }
+            foreach (var child in view.Subviews)
+                UseBestResolution(child);
         }
 
         public override void WillTerminate(NSNotification notification)

@@ -24,6 +24,8 @@
 	<string>${AuthorCopyright:HtmlEncode}</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
 	<key>NSMainStoryboardFile</key>
 	<string>Main</string>
 	<key>XSAppIconAssets</key>

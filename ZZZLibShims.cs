@@ -167,9 +167,10 @@ public class FormsRender
                     {
                         if (hwnd.DrawNeeded || forcerender)
                         {
+                            // the image may be drawn at the screen's scale, so place it by its size in points
                             if (hwnd.hwndbmpNC != null)
-                                Canvas.DrawImage(hwnd.hwndbmpNC, 
-                                    new SKPoint(x - borders.left, y - borders.top), paint);
+                                Canvas.DrawImage(hwnd.hwndbmpNC,
+                                    SKRect.Create(x - borders.left, y - borders.top, hwnd.width, hwnd.height), paint);
                             /*
                             Canvas.ClipRect(
                                 SKRect.Create(x, y, hwnd.width - borders.right - borders.left,

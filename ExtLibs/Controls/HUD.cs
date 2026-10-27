@@ -1334,7 +1334,11 @@ namespace MissionPlanner.Controls
 
                 if (!opengl)
                 {
-                    e.Graphics.DrawImageUnscaled(objBitmap, 0, 0);
+                    // a bitmap at the screen's scale is drawn back at the control's size in points
+                    if (bitmapscale != 1)
+                        e.Graphics.DrawImage(objBitmap, new Rectangle(0, 0, this.Width, this.Height));
+                    else
+                        e.Graphics.DrawImageUnscaled(objBitmap, 0, 0);
 
                     //File.WriteAllText("hud.svg", graphicsObjectGDIP.WriteSVGString());
                 }
@@ -1763,7 +1767,25 @@ namespace MissionPlanner.Controls
             else
             {
                 graphicsObjectGDIP.ResetTransform();
+                // the bitmap may hold more pixels than the control has points, see bitmapscale
+                if (bitmapscale != 1)
+                    graphicsObjectGDIP.ScaleTransform(bitmapscale, bitmapscale);
             }
+        }
+
+        /// <summary>
+        /// Pixels a point in objBitmap: on the Mac, 2 on a Retina screen, so the HUD is as sharp as the
+        /// screen it is drawn on
+        /// </summary>
+        float bitmapscale = 1;
+
+        static float DeviceScale()
+        {
+#if NETSTANDARD2_0
+            return Math.Max(1f, XplatUIMine.DeviceScale);
+#else
+            return 1f;
+#endif
         }
 
         public void RotateTransform(float angle)
@@ -1980,14 +2002,23 @@ namespace MissionPlanner.Controls
             bool isNaN = false;
             try
             {
+                var scale = opengl ? 1f : DeviceScale();
+                var bitmapwidth = Math.Max(1, (int) Math.Ceiling(this.Width * scale));
+                var bitmapheight = Math.Max(1, (int) Math.Ceiling(this.Height * scale));
                 if (graphicsObjectGDIP == null || !opengl &&
-                    (objBitmap.Width != this.Width || objBitmap.Height != this.Height))
+                    (objBitmap.Width != bitmapwidth || objBitmap.Height != bitmapheight))
                 {
-                    objBitmap = new Bitmap(this.Width, this.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                    bitmapscale = scale;
+                    objBitmap = new Bitmap(bitmapwidth, bitmapheight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
                     objBitmap.MakeTransparent();
                     graphicsObjectGDIP = new GdiGraphics(Graphics.FromImage(objBitmap));
 
+#if NETSTANDARD2_0
+                    // drawn by Skia, smooth lines and curves cost little
+                    graphicsObjectGDIP.SmoothingMode = SmoothingMode.AntiAlias;
+#else
                     graphicsObjectGDIP.SmoothingMode = SmoothingMode.HighSpeed;
+#endif
                     graphicsObjectGDIP.InterpolationMode = InterpolationMode.NearestNeighbor;
                     graphicsObjectGDIP.CompositingMode = CompositingMode.SourceOver;
                     graphicsObjectGDIP.CompositingQuality = CompositingQuality.HighSpeed;
@@ -1996,6 +2027,10 @@ namespace MissionPlanner.Controls
                 }
 
                 graphicsObjectGDIP.InterpolationMode = InterpolationMode.Bilinear;
+
+                // start from the bitmap's scale, whatever the last paint left
+                if (!opengl)
+                    ResetTransform();
 
                 try
                 {

@@ -476,10 +476,22 @@ index f55b0e192b..80dcda1017 100644
  
  			/// Make sure that we aren't drawing one more line then we need to
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
-index e2a43c3f25..51d9b27eab 100644
+index e2a43c3f25..2cfb4f1ee9 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
-@@ -1666,7 +1666,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
+@@ -100,8 +100,10 @@ public ThemeWin32Classic ()
+ 			string_format_menu_menubar_text.HotkeyPrefix = HotkeyPrefix.Show;
+ 		}
+ 
++		// what a control draws is recorded and drawn at the screen's own scale, which is already free of
++		// flicker; a back buffer would be a bitmap at one pixel a point, blurred on a Retina screen
+ 		public override bool DoubleBufferingSupported {
+-			get {return true; }
++			get {return false; }
+ 		}
+ 
+ 		public override int HorizontalScrollBarHeight {
+@@ -1666,7 +1668,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
  		public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rectangle clippingArea, FlatStyle style)
  		{
  			if (!comboBox.Enabled)
@@ -488,7 +500,7 @@ index e2a43c3f25..51d9b27eab 100644
  
  			if (comboBox.DropDownStyle == ComboBoxStyle.Simple)
  				g.FillRectangle (ResPool.GetSolidBrush (comboBox.Parent.BackColor), comboBox.ClientRectangle);
-@@ -1680,7 +1680,7 @@ public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rect
+@@ -1680,7 +1682,7 @@ public override void ComboBoxDrawBackground (ComboBox comboBox, Graphics g, Rect
  			}
  			bool is_flat = style == FlatStyle.Flat || style == FlatStyle.Popup;
  			if (!is_flat && clippingArea.IntersectsWith (comboBox.TextArea))
@@ -497,7 +509,7 @@ index e2a43c3f25..51d9b27eab 100644
  		}
  		public override bool CombBoxBackgroundHasHotElementStyle (ComboBox comboBox)
  		{
-@@ -4655,6 +4655,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4655,6 +4657,9 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  			Rectangle	first_arrow_area;
  			Rectangle	second_arrow_area;			
  			Rectangle	thumb_pos;
@@ -507,7 +519,7 @@ index e2a43c3f25..51d9b27eab 100644
  			
  			thumb_pos = bar.ThumbPos;
  
-@@ -4668,30 +4671,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4668,30 +4673,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Width = bar.Width;
  				bar.ThumbPos = thumb_pos;
  
@@ -542,7 +554,7 @@ index e2a43c3f25..51d9b27eab 100644
  			} else {
  				first_arrow_area = new Rectangle(0, 0, scrollbutton_width, bar.Height);
  				bar.FirstArrowArea = first_arrow_area;
-@@ -4702,30 +4696,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4702,30 +4698,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  				thumb_pos.Height = bar.Height;
  				bar.ThumbPos = thumb_pos;
  
@@ -577,7 +589,7 @@ index e2a43c3f25..51d9b27eab 100644
  			}
  
  			/* Thumb */
-@@ -4734,8 +4719,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
+@@ -4734,8 +4721,21 @@ public override void DrawScrollBar (Graphics dc, Rectangle clip, ScrollBar bar)
  
  		protected virtual void ScrollBar_DrawThumb(ScrollBar bar, Rectangle thumb_pos, Rectangle clip, Graphics dc)
  		{
@@ -601,7 +613,7 @@ index e2a43c3f25..51d9b27eab 100644
  		}
  
  		public override int ScrollBarButtonSize {
-@@ -6225,51 +6223,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
+@@ -6225,51 +6225,28 @@ public override void ManagedWindowSetButtonLocations (InternalWindowManager wm)
  			}
  		}
  
@@ -665,7 +677,7 @@ index e2a43c3f25..51d9b27eab 100644
  						tbheight + bdwidth - 1, form.Width - bdwidth - 1,
  						tbheight + bdwidth - 1);
  			return tb;
-@@ -6284,6 +6259,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6284,6 +6261,11 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  			Rectangle tb = ManagedWindowDrawTitleBarAndBorders (dc, clip, wm);
  
  			Form form = wm.Form;
@@ -677,7 +689,7 @@ index e2a43c3f25..51d9b27eab 100644
  			if (wm.ShowIcon) {
  				Rectangle icon = ManagedWindowGetTitleBarIconArea (wm);
  				if (icon.IntersectsWith (clip))
-@@ -6308,9 +6288,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
+@@ -6308,9 +6290,13 @@ public override void DrawManagedWindowDecorations (Graphics dc, Rectangle clip,
  				format.Trimming = StringTrimming.EllipsisCharacter;
  				format.LineAlignment = StringAlignment.Center;
  
@@ -692,7 +704,7 @@ index e2a43c3f25..51d9b27eab 100644
  						tb, format);
  			}
  		}
-@@ -6345,10 +6329,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
+@@ -6345,10 +6331,63 @@ private int DrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Fo
  
  		protected virtual void ManagedWindowDrawTitleButton (Graphics dc, TitleButton button, Rectangle clip, Form form)
  		{
@@ -759,7 +771,7 @@ index e2a43c3f25..51d9b27eab 100644
  		}
  
  		public override Rectangle ManagedWindowGetTitleBarIconArea (InternalWindowManager wm)
-@@ -6367,7 +6404,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
+@@ -6367,7 +6406,8 @@ public override Size ManagedWindowGetMenuButtonSize (InternalWindowManager wm)
  
  		public override bool ManagedWindowTitleButtonHasHotElementStyle (TitleButton button, Form form)
  		{
@@ -769,7 +781,7 @@ index e2a43c3f25..51d9b27eab 100644
  		}
  
  		public override void ManagedWindowDrawMenuButton (Graphics dc, TitleButton button, Rectangle clip, InternalWindowManager wm)
-@@ -6403,16 +6441,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
+@@ -6403,16 +6443,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
  			DrawBorderInternal(graphics, bounds.Left, bounds.Bottom-1, bounds.Right-1, bounds.Bottom-1, bottomWidth, bottomColor, bottomStyle, Border3DSide.Bottom);
  		}
  
@@ -878,7 +890,7 @@ index e2a43c3f25..51d9b27eab 100644
  			Rectangle	rect= new Rectangle (rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
  			bool is_ColorControl = control_color.ToArgb () == ColorControl.ToArgb () ? true : false;
  			
-@@ -6423,82 +6549,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
+@@ -6423,82 +6551,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
  				rect.Height += 4;
  			}
  			
@@ -1001,10 +1013,24 @@ index 792cc9dbf8..089c7fded8 100644
  
  			private void tmrRepeat_Tick (object sender, EventArgs e)
 diff --git a/mcs/class/System.Windows.Forms/xplatuimine.cs b/mcs/class/System.Windows.Forms/xplatuimine.cs
-index 6433ae217f..d95a0f832f 100644
+index 6433ae217f..db1915dc85 100644
 --- a/mcs/class/System.Windows.Forms/xplatuimine.cs
 +++ b/mcs/class/System.Windows.Forms/xplatuimine.cs
-@@ -365,6 +365,13 @@ public override IntPtr CreateWindow(CreateParams cp)
+@@ -116,6 +116,13 @@ public override Screen[] AllScreens
+     internal static Point mouse_position;
+     internal static bool grab_confined;
+     internal static IntPtr grab_hwnd;
++
++    /// <summary>
++    /// Pixels to a point on the screen being drawn to, 2 on a Retina screen. Images made from what a
++    /// window draws are made with this many pixels a point, so they stay sharp when drawn at that scale
++    /// </summary>
++    public static float DeviceScale = 1;
++
+     internal static Rectangle grab_area;
+     internal static WndProc wnd_proc;
+     internal static IntPtr prev_mouse_hwnd;
+@@ -365,6 +372,13 @@ public override IntPtr CreateWindow(CreateParams cp)
          return hwnd.zombie ? IntPtr.Zero : hwnd.Handle;
      }
  
@@ -1018,7 +1044,20 @@ index 6433ae217f..d95a0f832f 100644
      internal static Size TranslateWindowSizeToXWindowSize(CreateParams cp)
      {
          return TranslateWindowSizeToXWindowSize(cp, new Size(cp.Width, cp.Height));
-@@ -2552,12 +2559,9 @@ public override bool GetMessage(object queue_id, ref MSG msg, IntPtr hWnd, int w
+@@ -1670,7 +1684,11 @@ public override void PaintEventEnd(ref Message msg, IntPtr handle, bool client,
+         }
+         else
+         {
+-            hwnd.hwndbmpNC = SKImage.FromPicture(((SKPictureRecorder) pevent.Tag).EndRecording(),                new SKSizeI(hwnd.width, hwnd.height));
++            // at the screen's scale, so a window's frame and title bar are as sharp as what they hold
++            var scale = Math.Max(1f, DeviceScale);
++            hwnd.hwndbmpNC = SKImage.FromPicture(((SKPictureRecorder) pevent.Tag).EndRecording(),
++                new SKSizeI((int) Math.Ceiling(hwnd.width * scale), (int) Math.Ceiling(hwnd.height * scale)),
++                SKMatrix.CreateScale(scale, scale));
+         }
+ 
+         //Console.WriteLine("PaintEventEnd " + XplatUI.Window(handle) + " th: " + Thread.CurrentThread.Name + " " + hwnd.hwndbmp);
+@@ -2552,12 +2570,9 @@ public override bool GetMessage(object queue_id, ref MSG msg, IntPtr hWnd, int w
                                          Graphics g;
  
                                          g = Graphics.FromSKImage(hwnd.hwndbmpNC);
@@ -1034,7 +1073,7 @@ index 6433ae217f..d95a0f832f 100644
                                          g.Dispose();
                                          break;
                                      }
-@@ -2567,9 +2571,8 @@ public override bool GetMessage(object queue_id, ref MSG msg, IntPtr hWnd, int w
+@@ -2567,9 +2582,8 @@ public override bool GetMessage(object queue_id, ref MSG msg, IntPtr hWnd, int w
                                          Graphics g;
  
                                          g = Graphics.FromSKImage(hwnd.hwndbmpNC);
@@ -1046,7 +1085,7 @@ index 6433ae217f..d95a0f832f 100644
                                          g.Dispose();
                                          break;
                                      }
-@@ -3773,6 +3776,18 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
+@@ -3773,6 +3787,18 @@ public override IntPtr SendMessage(IntPtr hwnd, Msg message, IntPtr wParam, IntP
                  mouse_position.X = x;
                  mouse_position.Y = y;
  
