@@ -24,7 +24,8 @@ public class GdiGraphics : Graphics
     {
     }
 
-    public GdiGraphics(Graphics fromImage) : base(fromImage.Surface)
+    // draw to the same canvas, which for a window is not its Surface
+    public GdiGraphics(Graphics fromImage) : base(fromImage)
     {
     }
 }

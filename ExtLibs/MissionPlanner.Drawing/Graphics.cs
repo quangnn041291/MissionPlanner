@@ -85,6 +85,28 @@ namespace System.Drawing
             _surface = surface;
 
             Debug.Assert(_surface != null);
+
+            // a surface whose canvas is already scaled, as for a Retina screen, keeps that scale
+            _baseMatrix = surface.Canvas.TotalMatrix;
+        }
+
+        /// <summary>
+        /// Another Graphics drawing to the same canvas as other, as the GdiGraphics wrappers need. Made
+        /// from other's Surface instead, it would draw to nothing when other draws to a window's canvas
+        /// </summary>
+        protected Graphics(Graphics other) : this(other._surface)
+        {
+            _overridecanvas = other._overridecanvas;
+            _baseMatrix = other._baseMatrix;
+        }
+
+        /// <summary>
+        /// Make the transform so far the one ResetTransform goes back to, such as a scale to draw into
+        /// a bitmap with more pixels than points on a Retina screen
+        /// </summary>
+        public void KeepTransformAsBase()
+        {
+            _baseMatrix = _image.TotalMatrix;
         }
 
         public Graphics(IntPtr handle, int width, int height)
@@ -564,6 +586,11 @@ GRBackendRenderTargetDesc backendRenderTargetDescription = new GRBackendRenderTa
 ///   <paramref name="image" /> is <see langword="null" />.</exception>
         public void DrawImage(Image image, Rectangle destRect, Rectangle srcRect, GraphicsUnit srcUnit)
         {
+            // smooth a scaled image, as GDI+ does by default, unless nearest neighbour is asked for.
+            // unfiltered, an image shrunk a lot, such as a vehicle picture, comes out jagged
+            _imagePaint.FilterQuality = InterpolationMode == InterpolationMode.NearestNeighbor
+                ? SKFilterQuality.None
+                : SKFilterQuality.High;
             DrawImagePixels(image, srcRect.ToSKRect(), destRect.ToSKRect(), _imagePaint);
         }
 
