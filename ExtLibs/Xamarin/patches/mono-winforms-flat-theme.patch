@@ -1,8 +1,8 @@
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs
-index b29f7eb464..244323a5b9 100644
+index b29f7eb464..bebfc412f6 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/CheckBoxPainter.cs
-@@ -41,57 +41,50 @@ public CheckBoxPainter ()
+@@ -41,57 +41,51 @@ public CheckBoxPainter ()
  
  		public void PaintCheckBox (Graphics g, Rectangle bounds, Color backColor, Color foreColor, ElementState state, FlatStyle style, CheckState checkState)
  		{
@@ -26,7 +26,8 @@ index b29f7eb464..244323a5b9 100644
 +			int size = Math.Min (13, Math.Min (bounds.Width, bounds.Height));
 +			if (size < 4)
 +				return;
-+			RectangleF box = new RectangleF (bounds.X + (bounds.Width - size) / 2 + 0.5f, bounds.Y + (bounds.Height - size) / 2 + 0.5f, size - 1, size - 1);
++			// one pixel in from the glyph area, which starts at the control's own edge
++			RectangleF box = new RectangleF (bounds.X + (bounds.Width - size) / 2 + 1.5f, bounds.Y + (bounds.Height - size) / 2 + 1.5f, size - 2, size - 2);
 +			bool enabled = state != ElementState.Disabled;
 +
 +			SmoothingMode old_mode = g.SmoothingMode;
@@ -103,10 +104,10 @@ index b29f7eb464..244323a5b9 100644
  
  		#region Standard
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/RadioButtonPainter.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/RadioButtonPainter.cs
-index 622b0bede5..f25fa77048 100644
+index 622b0bede5..5890c047a4 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/RadioButtonPainter.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/RadioButtonPainter.cs
-@@ -41,57 +41,32 @@ public RadioButtonPainter ()
+@@ -41,57 +41,33 @@ public RadioButtonPainter ()
  
  		public void PaintRadioButton (Graphics g, Rectangle bounds, Color backColor, Color foreColor, ElementState state, FlatStyle style, bool isChecked)
  		{
@@ -164,7 +165,8 @@ index 622b0bede5..f25fa77048 100644
 +			int size = Math.Min (13, Math.Min (bounds.Width, bounds.Height));
 +			if (size < 4)
 +				return;
-+			RectangleF ring = new RectangleF (bounds.X + (bounds.Width - size) / 2 + 0.5f, bounds.Y + (bounds.Height - size) / 2 + 0.5f, size - 1, size - 1);
++			// one pixel in from the glyph area, which starts at the control's own edge
++			RectangleF ring = new RectangleF (bounds.X + (bounds.Width - size) / 2 + 1.5f, bounds.Y + (bounds.Height - size) / 2 + 1.5f, size - 2, size - 2);
 +			bool enabled = state != ElementState.Disabled;
 +
 +			Color accent = SystemColors.Highlight;
@@ -190,29 +192,44 @@ index 622b0bede5..f25fa77048 100644
  
  		#region Standard
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
-index 7daef6d5ac..41f8ad14c7 100644
+index 7daef6d5ac..f2ece3aa5d 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms.Theming/Default/TabControlPainter.cs
-@@ -299,8 +299,9 @@ public virtual void Draw (Graphics dc, Rectangle area, TabControl tab)
+@@ -299,11 +299,24 @@ public virtual void Draw (Graphics dc, Rectangle area, TabControl tab)
  			if (tab.ShowSlider) {
  				Rectangle right = GetRightScrollRect (tab);
  				Rectangle left = GetLeftScrollRect (tab);
 -				DrawScrollButton (dc, right, area, ScrollButton.Right, tab.RightSliderState);
 -				DrawScrollButton (dc, left, area, ScrollButton.Left, tab.LeftSliderState);
 +				// flat look: borderless arrows on the tab strip
-+				ThemeWin32Classic.DrawFlatArrowButton (dc, right, ScrollButton.Right, tab.RightSliderState == PushButtonState.Pressed ? 12 : 0, true, tab.BackColor, tab.ForeColor);
-+				ThemeWin32Classic.DrawFlatArrowButton (dc, left, ScrollButton.Left, tab.LeftSliderState == PushButtonState.Pressed ? 12 : 0, true, tab.BackColor, tab.ForeColor);
++				ThemeWin32Classic.DrawFlatArrowButton (dc, right, ScrollButton.Right, tab.RightSliderState == PushButtonState.Pressed ? 12 : 0, true, StripColor (tab), StripTextColor (tab));
++				ThemeWin32Classic.DrawFlatArrowButton (dc, left, ScrollButton.Left, tab.LeftSliderState == PushButtonState.Pressed ? 12 : 0, true, StripColor (tab), StripTextColor (tab));
  			}
  		}
  
-@@ -321,14 +322,12 @@ static ButtonState GetButtonState (PushButtonState state)
++		// flat look: a TabControl's BackColor is always the system control colour, so the strip takes the
++		// colour of what the control sits on, and its text a colour that reads on that
++		internal static Color StripColor (TabControl tab)
++		{
++			return tab.Parent != null ? tab.Parent.BackColor : tab.BackColor;
++		}
++
++		internal static Color StripTextColor (TabControl tab)
++		{
++			return ThemeWin32Classic.FlatReadable (tab.ForeColor, StripColor (tab));
++		}
++
+ 		protected virtual void DrawScrollButton (Graphics dc, Rectangle bounds, Rectangle clippingArea, ScrollButton button, PushButtonState state)
+ 		{
+ 			ControlPaint.DrawScrollButton (dc, bounds, button, GetButtonState (state));
+@@ -321,22 +334,21 @@ static ButtonState GetButtonState (PushButtonState state)
  
  		protected virtual void DrawBackground (Graphics dc, Rectangle area, TabControl tab)
  		{
 -			Brush brush = SystemBrushes.Control;
 -			dc.FillRectangle (brush, area);
 +			// flat look: the strip takes the control's colour, and the panel a thin line around it
-+			dc.FillRectangle (ResPool.GetSolidBrush (tab.BackColor), area);
++			dc.FillRectangle (ResPool.GetSolidBrush (StripColor (tab)), area);
  			Rectangle panel_rect = GetTabPanelRect (tab);
  
 -			if (tab.Appearance == TabAppearance.Normal) {
@@ -220,11 +237,21 @@ index 7daef6d5ac..41f8ad14c7 100644
 -				ControlPaint.DrawBorder3D (dc, panel_rect, Border3DStyle.Raised, Border3DSide.Right | Border3DSide.Bottom);
 -			}
 +			if (tab.Appearance == TabAppearance.Normal)
-+				ThemeEngine.Current.CPDrawBorder3D (dc, panel_rect, Border3DStyle.Flat, Border3DSide.All, tab.BackColor);
++				ThemeEngine.Current.CPDrawBorder3D (dc, panel_rect, Border3DStyle.Flat, Border3DSide.All, StripColor (tab));
  		}
  
  		protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, System.Windows.Forms.TabControl tab, Rectangle bounds, bool is_selected)
-@@ -359,62 +358,24 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+ 		{
+ 			Rectangle interior;
+ 			int res = bounds.Width;
++			Color strip = tab.Appearance == TabAppearance.Normal ? StripColor (tab) : tab.BackColor;
+ 
+-			dc.FillRectangle (ResPool.GetSolidBrush (tab.BackColor), bounds);
++			dc.FillRectangle (ResPool.GetSolidBrush (strip), bounds);
+ 
+ 			if (tab.Appearance == TabAppearance.Buttons || tab.Appearance == TabAppearance.FlatButtons) {
+ 				// Separators
+@@ -359,77 +371,43 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
  
  
  			} else {
@@ -234,7 +261,7 @@ index 7daef6d5ac..41f8ad14c7 100644
 -
 -				switch (tab.Alignment) {
 +				if (is_selected) {
-+					dc.FillRectangle (ResPool.GetSolidBrush (ThemeWin32Classic.FlatShade (tab.BackColor, 8)), bounds);
++					dc.FillRectangle (ResPool.GetSolidBrush (ThemeWin32Classic.FlatShade (strip, 8)), bounds);
  
 +					Brush accent = ResPool.GetSolidBrush (SystemColors.Highlight);
 +					switch (tab.Alignment) {
@@ -296,11 +323,15 @@ index 7daef6d5ac..41f8ad14c7 100644
  				}
  			}
  
-@@ -424,12 +385,14 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+ 			Point padding = tab.Padding;
++			padding.X = tab.FlatPaddingX;
+ 			interior = new Rectangle (bounds.Left + padding.X - 1, // substract a little offset
+ 				bounds.Top + padding.Y,
  				bounds.Width - (padding.X * 2), 
  				bounds.Height - (padding.Y * 2));
  
-+			Brush text_brush = ResPool.GetSolidBrush (is_selected ? tab.ForeColor : ThemeWin32Classic.FlatBlend (tab.ForeColor, tab.BackColor, 35));
++			Color text_color = ThemeWin32Classic.FlatReadable (tab.ForeColor, strip);
++			Brush text_brush = ResPool.GetSolidBrush (is_selected ? text_color : ThemeWin32Classic.FlatBlend (text_color, strip, 35));
 +
  			if (tab.DrawMode == TabDrawMode.Normal && page.Text != null) {
  				if (tab.Alignment == TabAlignment.Left) {
@@ -312,7 +343,7 @@ index 7daef6d5ac..41f8ad14c7 100644
  						tab.Padding.X - 2, // drawstring adds some extra unwanted leading spaces, so trimming
  						tab.Padding.Y,
  						defaultFormatting);
-@@ -438,7 +401,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+@@ -438,7 +416,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
  					dc.TranslateTransform (bounds.Right, bounds.Top);
  					dc.RotateTransform (90);
  					dc.DrawString (page.Text, tab.Font,
@@ -321,7 +352,7 @@ index 7daef6d5ac..41f8ad14c7 100644
  						tab.Padding.X - 2, // drawstring adds some extra unwanted leading spaces, so trimming
  						tab.Padding.Y,
  						defaultFormatting);
-@@ -474,7 +437,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+@@ -474,7 +452,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
  						str_rect.Width -= tab.ImageList.ImageSize.Width + 2;
  					}
  					dc.DrawString (page.Text, tab.Font,
@@ -330,6 +361,15 @@ index 7daef6d5ac..41f8ad14c7 100644
  						str_rect, 
  						defaultFormatting);
  
+@@ -491,7 +469,7 @@ protected virtual int DrawTab (Graphics dc, System.Windows.Forms.TabPage page, S
+ 			}
+ 
+ 			// TabControl ignores the value of ShowFocusCues
+-			if (page.Parent.Focused && is_selected) {
++			if (page.Parent.Focused && is_selected && tab.Appearance != TabAppearance.Normal) {
+ 				Rectangle focus_rect = bounds;
+ 				focus_rect.Inflate (-2, -2);
+ 				ThemeEngine.Current.CPDrawFocusRectangle (dc, focus_rect, tab.BackColor, tab.ForeColor);
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
 index 9196210f8f..f7b2ef86be 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
@@ -352,6 +392,31 @@ index 9196210f8f..f7b2ef86be 100644
  			}
  		}
  
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
+index 7ae80d6393..c28b5f52f1 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/TabControl.cs
+@@ -151,6 +151,11 @@ public TabControl ()
+ 
+ 		[Browsable(false)]
+ 		[EditorBrowsable(EditorBrowsableState.Never)]
++		// flat look: room either side of a tab's text even when Padding is 0
++		internal int FlatPaddingX {
++			get { return Math.Max (Padding.X, 8); }
++		}
++
+ 		public override Color BackColor {
+ 			get { return ThemeEngine.Current.ColorControl; }
+ 			set { /* nothing happens on set on MS */ }
+@@ -1309,7 +1314,7 @@ private void SizeTabs (int row_width, bool vertical)
+ 				width = item_size.Width;
+ 			} else {			
+ 				width = MeasureStringWidth (DeviceContext, page.Text, Font);
+-				width += (Padding.X * 2) + 2;
++				width += (FlatPaddingX * 2) + 2;
+ 
+ 				if (ImageList != null && page.ImageIndex >= 0) {
+ 					width += ImageList.ImageSize.Width + ThemeEngine.Current.TabControlImagePadding.X;
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/TextBoxBase.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/TextBoxBase.cs
 index 4085bb5eba..5e5916fc48 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/TextBoxBase.cs
@@ -409,7 +474,7 @@ index f55b0e192b..80dcda1017 100644
  
  			/// Make sure that we aren't drawing one more line then we need to
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
-index e2a43c3f25..1b18116f8e 100644
+index e2a43c3f25..9d9f852f9e 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 @@ -1666,7 +1666,7 @@ public override bool ComboBoxDropDownButtonHasHotElementStyle (ComboBox comboBox
@@ -534,7 +599,7 @@ index e2a43c3f25..1b18116f8e 100644
  		}
  
  		public override int ScrollBarButtonSize {
-@@ -6403,16 +6401,94 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
+@@ -6403,16 +6401,104 @@ public override void ManagedWindowOnSizeInitializedOrChanged (Form form)
  			DrawBorderInternal(graphics, bounds.Left, bounds.Bottom-1, bounds.Right-1, bounds.Bottom-1, bottomWidth, bottomColor, bottomStyle, Border3DSide.Bottom);
  		}
  
@@ -557,6 +622,16 @@ index e2a43c3f25..1b18116f8e 100644
 +				fore.R + (back.R - fore.R) * percent / 100,
 +				fore.G + (back.G - fore.G) * percent / 100,
 +				fore.B + (back.B - fore.B) * percent / 100);
++		}
++
++		// fore, unless it is too close to back to read, then white or black, whichever back is not
++		internal static Color FlatReadable (Color fore, Color back)
++		{
++			int fore_lum = (fore.R * 299 + fore.G * 587 + fore.B * 114) / 1000;
++			int back_lum = (back.R * 299 + back.G * 587 + back.B * 114) / 1000;
++			if (Math.Abs (fore_lum - back_lum) >= 90)
++				return fore;
++			return back_lum < 128 ? Color.White : Color.Black;
 +		}
 +
 +		// A thin chevron pointing the way of direction, centred in area
@@ -633,7 +708,7 @@ index e2a43c3f25..1b18116f8e 100644
  			Rectangle	rect= new Rectangle (rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
  			bool is_ColorControl = control_color.ToArgb () == ColorControl.ToArgb () ? true : false;
  			
-@@ -6423,82 +6499,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
+@@ -6423,82 +6509,25 @@ public override void CPDrawBorder3D (Graphics graphics, Rectangle rectangle, Bor
  				rect.Height += 4;
  			}
  			
