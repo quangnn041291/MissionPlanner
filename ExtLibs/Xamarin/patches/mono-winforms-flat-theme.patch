@@ -380,10 +380,30 @@ index 7daef6d5ac..f2ece3aa5d 100644
  				focus_rect.Inflate (-2, -2);
  				ThemeEngine.Current.CPDrawFocusRectangle (dc, focus_rect, tab.BackColor, tab.ForeColor);
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
-index 9196210f8f..800e6d011a 100644
+index 9196210f8f..a7408baca4 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
 +++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/ComboBox.cs
-@@ -1472,14 +1472,9 @@ internal void Draw (Rectangle clip, Graphics dc)
+@@ -432,6 +432,9 @@ void SetTextBoxAutoCompleteData ()
+ 					if (selected_item != null)
+ 						textbox_ctrl.Text = GetItemText (selected_item);
+ 					textbox_ctrl.BorderStyle = BorderStyle.None;
++					// in the box's colours, which may have been set before the text box was made
++					textbox_ctrl.BackColor = BackColor;
++					textbox_ctrl.ForeColor = ForeColor;
+ 					textbox_ctrl.TextChanged += new EventHandler (OnTextChangedEdit);
+ 					textbox_ctrl.KeyPress += new KeyPressEventHandler (OnTextKeyPress);
+ 					textbox_ctrl.Click += new EventHandler (OnTextBoxClick);
+@@ -1416,6 +1419,9 @@ void LayoutComboBox ()
+ 				textbox_ctrl.Location = new Point (text_area.X + text_border, text_area.Y + text_border);
+ 				textbox_ctrl.Width = text_area.Width - button_area.Width - text_border * 2;
+ 				textbox_ctrl.Height = text_area.Height - text_border * 2;
++				// flat look: the text in the middle of the box, whatever height the text box keeps
++				textbox_ctrl.Top = text_area.Y + Math.Max (text_border, (text_area.Height - textbox_ctrl.Height) / 2);
++				textbox_ctrl.TopMargin = Math.Max (1, (textbox_ctrl.Height - textbox_ctrl.Font.Height) / 2);
+ 			}
+ 
+ 			if (listbox_ctrl != null && dropdown_style == ComboBoxStyle.Simple) {
+@@ -1472,14 +1478,9 @@ internal void Draw (Rectangle clip, Graphics dc)
  				else
  					current_state = ButtonState.Inactive;
  
@@ -401,27 +421,31 @@ index 9196210f8f..800e6d011a 100644
  			}
  		}
  
-@@ -2460,6 +2455,19 @@ protected override CreateParams CreateParams
+@@ -2460,6 +2461,23 @@ protected override CreateParams CreateParams
  			}
  
  			internal override bool ActivateOnShow { get { return false; } }
 +
 +			// flat look: rows of the list are taller than the items they show, so the text has room
-+			// around it. owner drawn lists keep the height their owner gives
++			// around it. lists that measure each item themselves keep the height they give
 +			const int FlatRowPadding = 6;
 +
++			int RowPadding {
++				get { return owner.DrawMode == DrawMode.OwnerDrawVariable ? 0 : FlatRowPadding; }
++			}
++
 +			int RowHeight {
-+				get { return owner.ItemHeight + (owner.DrawMode == DrawMode.Normal ? FlatRowPadding : 0); }
++				get { return owner.ItemHeight + RowPadding; }
 +			}
 +
 +			int RowHeightAt (int index)
 +			{
-+				return owner.GetItemHeight (index) + (owner.DrawMode == DrawMode.Normal ? FlatRowPadding : 0);
++				return owner.GetItemHeight (index) + RowPadding;
 +			}
  			#region Private Methods
  
  			// Calcs the listbox area
-@@ -2472,7 +2480,7 @@ internal void CalcListBoxArea ()
+@@ -2472,7 +2490,7 @@ internal void CalcListBoxArea ()
  					Rectangle area = owner.listbox_area;
  					width = area.Width;
  					height = area.Height;
@@ -430,7 +454,7 @@ index 9196210f8f..800e6d011a 100644
  
  					// No calculation needed
  					if (height <= 0 || width <= 0)
-@@ -2487,24 +2495,24 @@ internal void CalcListBoxArea ()
+@@ -2487,24 +2505,24 @@ internal void CalcListBoxArea ()
  					if (owner.DrawMode == DrawMode.OwnerDrawVariable) {
  						height = 0;
  						for (int i = 0; i < visible_items_count; i++) {
@@ -459,7 +483,7 @@ index 9196210f8f..800e6d011a 100644
  
  				ComboBoxStyle dropdown_style = owner.DropDownStyle;
  				if (!show_scrollbar) {
-@@ -2518,7 +2526,7 @@ internal void CalcListBoxArea ()
+@@ -2518,7 +2536,7 @@ internal void CalcListBoxArea ()
  						top_item = 0;
  					}
  					if (dropdown_style != ComboBoxStyle.Simple)
@@ -468,7 +492,7 @@ index 9196210f8f..800e6d011a 100644
  				} else {
  					/* Need vertical scrollbar */
  					if (vscrollbar_ctrl == null) {
-@@ -2619,14 +2627,14 @@ private Rectangle GetItemDisplayRectangle (int index, int top_index)
+@@ -2619,14 +2637,14 @@ private Rectangle GetItemDisplayRectangle (int index, int top_index)
  					throw new  ArgumentOutOfRangeException ("GetItemRectangle index out of range.");
  
  				Rectangle item_rect = new Rectangle ();
@@ -566,6 +590,22 @@ index f55b0e192b..80dcda1017 100644
  			}
  
  			/// Make sure that we aren't drawing one more line then we need to
+diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/TextRenderer.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/TextRenderer.cs
+index afac75f304..11cb706f91 100644
+--- a/mcs/class/System.Windows.Forms/System.Windows.Forms/TextRenderer.cs
++++ b/mcs/class/System.Windows.Forms/System.Windows.Forms/TextRenderer.cs
+@@ -505,9 +505,8 @@ private static Rectangle PadDrawStringRectangle (Rectangle r, TextFormatFlags fl
+ 				r.X += 2;
+ 				r.Width -= 2;
+ 			}
+-			if ((flags & TextFormatFlags.VerticalCenter) == TextFormatFlags.VerticalCenter && XplatUI.RunningOnUnix) {
+-				r.Y -= 1;
+-			}
++			// no nudge up for vertically centred text on Unix: drawn by Skia it already sits in the middle,
++			// and a pixel up left the text of check boxes and labels above what is beside it
+ 
+ 			return r;
+ 		}
 diff --git a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs b/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs
 index 1afec18538..27f6b8f770 100644
 --- a/mcs/class/System.Windows.Forms/System.Windows.Forms/ThemeWin32Classic.cs

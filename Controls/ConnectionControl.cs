@@ -67,11 +67,14 @@ namespace MissionPlanner.Controls
                 text = text + " " + SerialPort.GetNiceName(text);
             }
 
-            e.Graphics.DrawString(text, e.Font,
-                new SolidBrush(combo.ForeColor),
-                new Point(e.Bounds.X, e.Bounds.Y));
-
-            e.DrawFocusRectangle();
+            // in from the left and in the middle of the row, as the other drop down lists are
+            var indent = (e.State & DrawItemState.ComboBoxEdit) == DrawItemState.ComboBoxEdit ? 4 : 8;
+            var textBounds = new Rectangle(e.Bounds.X + indent, e.Bounds.Y, e.Bounds.Width - indent, e.Bounds.Height);
+            using (var format = new StringFormat {LineAlignment = StringAlignment.Center, FormatFlags = StringFormatFlags.NoWrap})
+            using (var brush = new SolidBrush((e.State & DrawItemState.Selected) == DrawItemState.Selected
+                       ? SystemColors.HighlightText
+                       : combo.ForeColor))
+                e.Graphics.DrawString(text, e.Font, brush, textBounds, format);
         }
 
         public void UpdateSysIDS()
