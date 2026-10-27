@@ -1131,12 +1131,26 @@ namespace MissionPlanner
                 this.Icon = Icon.FromHandle(((Bitmap) Program.IconFile).GetHicon());
             }
 
-            MenuArduPilot.Image = new Bitmap(Properties.Resources._0d92fed790a3a70170e61a86db103f399a595c70,
-                (int) (200), 31);
-            MenuArduPilot.Width = MenuArduPilot.Image.Width;
+            if (Program.MONO)
+            {
+                // drawn scaled from the full size logo, so it is sharp on a Retina screen; redrawn at 200
+                // pixels across it would be magnified
+                MenuArduPilot.BackgroundImage = Properties.Resources._0d92fed790a3a70170e61a86db103f399a595c70;
+                MenuArduPilot.BackgroundImageLayout = ImageLayout.Zoom;
+                MenuArduPilot.Width = 200;
+            }
+            else
+            {
+                MenuArduPilot.Image = new Bitmap(Properties.Resources._0d92fed790a3a70170e61a86db103f399a595c70,
+                    (int) (200), 31);
+                MenuArduPilot.Width = MenuArduPilot.Image.Width;
+            }
 
             if (Program.Logo2 != null)
+            {
+                MenuArduPilot.BackgroundImage = null;
                 MenuArduPilot.Image = Program.Logo2;
+            }
 
             Application.DoEvents();
 
@@ -1242,7 +1256,7 @@ namespace MissionPlanner
 
         /// <summary>
         /// Mono squashes a menu image that is taller than the room above its text, and pushes
-        /// it up so its top is cut off. Shrink each image to fit that room, keeping its shape.
+        /// it up so its top is cut off. Shrink the menu's image size to fit that room, keeping its shape.
         /// </summary>
         private void FitMenuImagesAboveText()
         {
@@ -1256,18 +1270,16 @@ namespace MissionPlanner
                 item.TextImageRelation != TextImageRelation.ImageAboveText)
                 return;
 
-            var image = item.Image;
             var room = item.ContentRectangle.Height - TextRenderer.MeasureText(item.Text, item.Font).Height;
-            var scale = Math.Min((double)room / image.Height,
-                (double)MainMenu.ImageScalingSize.Width / image.Width);
             if (room <= 0)
                 return;
 
-            item.ImageScaling = ToolStripItemImageScaling.None;
-            // keep the tag, the connect button checks it to tell which of its icons is showing
-            if (scale < 1)
-                item.Image = new Bitmap(image, Math.Max(1, (int)(image.Width * scale)),
-                    Math.Max(1, (int)(image.Height * scale))) {Tag = image.Tag};
+            // make the menu's image size fit the room, keeping its shape, and let the images be drawn
+            // scaled into it. redrawing each image smaller would leave it blurred on a Retina screen
+            var size = MainMenu.ImageScalingSize;
+            if (size.Height > room)
+                MainMenu.ImageScalingSize = new Size(Math.Max(1, size.Width * room / size.Height), room);
+            item.ImageScaling = ToolStripItemImageScaling.SizeToFit;
         }
 
         void adsb_UpdatePlanePosition(object sender, MissionPlanner.Utilities.adsb.PointLatLngAltHdg adsb)
