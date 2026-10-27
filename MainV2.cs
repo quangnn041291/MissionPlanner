@@ -1133,11 +1133,25 @@ namespace MissionPlanner
 
             if (Program.MONO)
             {
-                // drawn scaled from the full size logo, so it is sharp on a Retina screen; redrawn at 200
-                // pixels across it would be magnified
-                MenuArduPilot.BackgroundImage = Properties.Resources._0d92fed790a3a70170e61a86db103f399a595c70;
-                MenuArduPilot.BackgroundImageLayout = ImageLayout.Zoom;
-                MenuArduPilot.Width = 200;
+                // an empty image of the logo's size gives the button its size and place, as the redrawn
+                // logo did; the full size logo is drawn over it, scaled, so it is sharp on a Retina
+                // screen, which a bitmap redrawn at 200 pixels across and then magnified was not
+                var logo = Properties.Resources._0d92fed790a3a70170e61a86db103f399a595c70;
+                MenuArduPilot.Image = new Bitmap(200, 31);
+                MenuArduPilot.Width = MenuArduPilot.Image.Width;
+                MainMenu.Renderer.RenderItemImage += (sender, e) =>
+                {
+                    if (e.Item == MenuArduPilot && Program.Logo2 == null)
+                        e.Graphics.DrawImage(logo, e.ImageRectangle);
+                };
+
+                // room above and below the menu buttons: the bar is taller, and each button is kept to
+                // the height it had by a margin as big as the extra
+                const int menuPadding = 6;
+                foreach (ToolStripItem item in MainMenu.Items)
+                    item.Margin = new Padding(item.Margin.Left, item.Margin.Top + menuPadding,
+                        item.Margin.Right, item.Margin.Bottom + menuPadding);
+                panel1.Height += menuPadding * 2;
             }
             else
             {
@@ -1147,10 +1161,7 @@ namespace MissionPlanner
             }
 
             if (Program.Logo2 != null)
-            {
-                MenuArduPilot.BackgroundImage = null;
                 MenuArduPilot.Image = Program.Logo2;
-            }
 
             Application.DoEvents();
 
