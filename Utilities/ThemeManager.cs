@@ -880,6 +880,8 @@ mc:Ignorable=""d""
                     }
                     but.TextColor = TextColor;
                     but.Outline = ButBorder;
+                    if (but.Tag is string && (string) but.Tag == "subtle")
+                        but.BGGradTop = but.BGGradBot = but.Outline = ControlBGColor;
                 }
                 else if (ctl.GetType() == typeof(TextBox))
                 {
@@ -1179,6 +1181,9 @@ mc:Ignorable=""d""
                     but.ColorMouseDown = ColorMouseDown;        //sets the colour of buttons for different situations
                     but.ColorMouseOver = ColorMouseOver;
                     but.ColorNotEnabled = ColorNotEnabled;
+                    // a quiet button, the colour of a control rather than the accent colour
+                    if (but.Tag is string && (string) but.Tag == "subtle")
+                        but.BGGradTop = but.BGGradBot = but.Outline = ControlBGColor;
                 }
                 else if (ctl.GetType() == typeof(TextBox))
                 {

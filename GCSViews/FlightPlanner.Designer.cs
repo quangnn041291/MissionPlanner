@@ -443,6 +443,7 @@ namespace MissionPlanner.GCSViews
             // 
             resources.ApplyResources(this.but_mincommands, "but_mincommands");
             this.but_mincommands.Name = "but_mincommands";
+            this.but_mincommands.Tag = "subtle";
             this.but_mincommands.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
             this.but_mincommands.UseVisualStyleBackColor = true;
             this.but_mincommands.Click += new System.EventHandler(this.but_mincommands_Click);

@@ -70,12 +70,12 @@ namespace MissionPlanner.GCSViews
             if (panelWaypoints.Height <= 30)
             {
                 panelWaypoints.Height = 166;
-                but_mincommands.Text = @"˅";
+                but_mincommands.Text = @"▾";
             }
             else
             {
                 panelWaypoints.Height = but_mincommands.Height;
-                but_mincommands.Text = @"˄";
+                but_mincommands.Text = @"▴";
             }
         }
 
@@ -4950,10 +4950,12 @@ namespace MissionPlanner.GCSViews
         {
             // this is a mono fix for the zoom bar
             //Console.WriteLine("panelmap "+panelMap.Size.ToString());
-            MainMap.Size = new Size(panelMap.Size.Width - 50, panelMap.Size.Height);
+            // the map stops a few pixels short of the zoom bar and box, so they are beside it, not over it
+            MainMap.Size = new Size(panelMap.Size.Width - 56, panelMap.Size.Height);
             TRK_zoom.Location = new Point(panelMap.Size.Width - 50, TRK_zoom.Location.Y);
             TRK_zoom.Size = new Size(TRK_zoom.Size.Width, panelMap.Size.Height - TRK_zoom.Location.Y);
             label11.Location = new Point(panelMap.Size.Width - 50, label11.Location.Y);
+            Zoomlevel.Location = new Point(panelMap.Size.Width - 50 + Math.Max(0, (50 - Zoomlevel.Width) / 2), Zoomlevel.Location.Y);
         }
 
         public void Planner_Resize(object sender, EventArgs e)

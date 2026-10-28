@@ -319,7 +319,7 @@
     <value>3, 61</value>
   </data>
   <data name="but_writewpfast.Size" type="System.Drawing.Size, System.Drawing">
-    <value>115, 23</value>
+    <value>145, 23</value>
   </data>
   <data name="but_writewpfast.TabIndex" type="System.Int32, mscorlib">
     <value>9</value>
@@ -346,7 +346,7 @@
     <value>3, 32</value>
   </data>
   <data name="BUT_write.Size" type="System.Drawing.Size, System.Drawing">
-    <value>115, 23</value>
+    <value>145, 23</value>
   </data>
   <data name="BUT_write.TabIndex" type="System.Int32, mscorlib">
     <value>8</value>
@@ -373,7 +373,7 @@
     <value>3, 4</value>
   </data>
   <data name="BUT_read.Size" type="System.Drawing.Size, System.Drawing">
-    <value>115, 23</value>
+    <value>145, 23</value>
   </data>
   <data name="BUT_read.TabIndex" type="System.Int32, mscorlib">
     <value>7</value>
@@ -397,7 +397,7 @@
     <value>3, 278</value>
   </data>
   <data name="panel5.Size" type="System.Drawing.Size, System.Drawing">
-    <value>123, 87</value>
+    <value>153, 87</value>
   </data>
   <data name="panel5.TabIndex" type="System.Int32, mscorlib">
     <value>29</value>
@@ -538,7 +538,7 @@
     <value>47, 65</value>
   </data>
   <data name="TXT_homealt.Size" type="System.Drawing.Size, System.Drawing">
-    <value>65, 20</value>
+    <value>95, 20</value>
   </data>
   <data name="TXT_homealt.TabIndex" type="System.Int32, mscorlib">
     <value>14</value>
@@ -559,7 +559,7 @@
     <value>47, 42</value>
   </data>
   <data name="TXT_homelng.Size" type="System.Drawing.Size, System.Drawing">
-    <value>65, 20</value>
+    <value>95, 20</value>
   </data>
   <data name="TXT_homelng.TabIndex" type="System.Int32, mscorlib">
     <value>13</value>
@@ -580,7 +580,7 @@
     <value>47, 18</value>
   </data>
   <data name="TXT_homelat.Size" type="System.Drawing.Size, System.Drawing">
-    <value>65, 20</value>
+    <value>95, 20</value>
   </data>
   <data name="TXT_homelat.TabIndex" type="System.Int32, mscorlib">
     <value>12</value>
@@ -601,7 +601,7 @@
     <value>3, 371</value>
   </data>
   <data name="panel1.Size" type="System.Drawing.Size, System.Drawing">
-    <value>123, 89</value>
+    <value>153, 89</value>
   </data>
   <data name="panel1.TabIndex" type="System.Int32, mscorlib">
     <value>31</value>
@@ -668,7 +668,7 @@
     <value>0, 0</value>
   </data>
   <data name="coords1.Size" type="System.Drawing.Size, System.Drawing">
-    <value>127, 55</value>
+    <value>157, 55</value>
   </data>
   <data name="coords1.TabIndex" type="System.Int32, mscorlib">
     <value>16</value>
@@ -761,7 +761,7 @@
     <value>55</value>
   </data>
   <data name="but_mincommands.Text" xml:space="preserve">
-    <value>˅</value>
+    <value>▾</value>
   </data>
   <data name="&gt;&gt;but_mincommands.Name" xml:space="preserve">
     <value>but_mincommands</value>
@@ -1299,7 +1299,7 @@
     <value>3, 3</value>
   </data>
   <data name="panel4.Size" type="System.Drawing.Size, System.Drawing">
-    <value>127, 55</value>
+    <value>157, 55</value>
   </data>
   <data name="panel4.TabIndex" type="System.Int32, mscorlib">
     <value>50</value>
@@ -1320,7 +1320,7 @@
     <value>3, 97</value>
   </data>
   <data name="progressBarInjectCustomMap.Size" type="System.Drawing.Size, System.Drawing">
-    <value>115, 23</value>
+    <value>145, 23</value>
   </data>
   <data name="progressBarInjectCustomMap.TabIndex" type="System.Int32, mscorlib">
     <value>48</value>
@@ -1347,7 +1347,7 @@
     <value>3, 68</value>
   </data>
   <data name="BUT_InjectCustomMap.Size" type="System.Drawing.Size, System.Drawing">
-    <value>115, 23</value>
+    <value>145, 23</value>
   </data>
   <data name="BUT_InjectCustomMap.TabIndex" type="System.Int32, mscorlib">
     <value>46</value>
@@ -1401,7 +1401,7 @@
     <value>3, 22</value>
   </data>
   <data name="comboBoxMapType.Size" type="System.Drawing.Size, System.Drawing">
-    <value>111, 21</value>
+    <value>141, 21</value>
   </data>
   <data name="comboBoxMapType.TabIndex" type="System.Int32, mscorlib">
     <value>42</value>
@@ -1455,7 +1455,7 @@
     <value>3, 64</value>
   </data>
   <data name="panel3.Size" type="System.Drawing.Size, System.Drawing">
-    <value>123, 127</value>
+    <value>153, 127</value>
   </data>
   <data name="panel3.TabIndex" type="System.Int32, mscorlib">
     <value>49</value>
@@ -1509,7 +1509,7 @@
     <value>3, 3</value>
   </data>
   <data name="BUT_loadwpfile.Size" type="System.Drawing.Size, System.Drawing">
-    <value>115, 23</value>
+    <value>145, 23</value>
   </data>
   <data name="BUT_loadwpfile.TabIndex" type="System.Int32, mscorlib">
     <value>46</value>
@@ -1536,7 +1536,7 @@
     <value>3, 32</value>
   </data>
   <data name="BUT_saveWPFile.Size" type="System.Drawing.Size, System.Drawing">
-    <value>115, 23</value>
+    <value>145, 23</value>
   </data>
   <data name="BUT_saveWPFile.TabIndex" type="System.Int32, mscorlib">
     <value>47</value>
@@ -1560,7 +1560,7 @@
     <value>3, 197</value>
   </data>
   <data name="panel2.Size" type="System.Drawing.Size, System.Drawing">
-    <value>123, 75</value>
+    <value>153, 75</value>
   </data>
   <data name="panel2.TabIndex" type="System.Int32, mscorlib">
     <value>48</value>
@@ -1584,7 +1584,7 @@
     <value>0, 0</value>
   </data>
   <data name="flowLayoutPanel1.Size" type="System.Drawing.Size, System.Drawing">
-    <value>131, 488</value>
+    <value>161, 488</value>
   </data>
   <data name="flowLayoutPanel1.TabIndex" type="System.Int32, mscorlib">
     <value>51</value>
@@ -1611,7 +1611,7 @@
     <value>21, 21</value>
   </data>
   <data name="panelAction.Size" type="System.Drawing.Size, System.Drawing">
-    <value>131, 488</value>
+    <value>161, 488</value>
   </data>
   <data name="panelAction.TabIndex" type="System.Int32, mscorlib">
     <value>50</value>
@@ -1788,10 +1788,13 @@
     <value>NoControl</value>
   </data>
   <data name="label11.Location" type="System.Drawing.Point, System.Drawing">
-    <value>930, 5</value>
+    <value>922, 3</value>
+  </data>
+  <data name="label11.Padding" type="System.Windows.Forms.Padding, System.Windows.Forms">
+    <value>4, 2, 4, 2</value>
   </data>
   <data name="label11.Size" type="System.Drawing.Size, System.Drawing">
-    <value>34, 13</value>
+    <value>42, 17</value>
   </data>
   <data name="label11.TabIndex" type="System.Int32, mscorlib">
     <value>47</value>

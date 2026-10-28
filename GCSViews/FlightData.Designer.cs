@@ -2485,6 +2485,8 @@ namespace MissionPlanner.GCSViews
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.ContextMenuStrip = this.contextMenuStripMap;
+            // the zoom bar and box sit in the padding, so they are beside the map, not over it
+            this.splitContainer1.Panel2.Padding = new System.Windows.Forms.Padding(0, 0, 50, 0);
             this.splitContainer1.Panel2.Controls.Add(this.label1);
             this.splitContainer1.Panel2.Controls.Add(this.but_disablejoystick);
             this.splitContainer1.Panel2.Controls.Add(this.Zoomlevel);

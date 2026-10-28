@@ -1152,6 +1152,33 @@ namespace MissionPlanner
                     item.Margin = new Padding(item.Margin.Left, item.Margin.Top + menuPadding,
                         item.Margin.Right, item.Margin.Bottom + menuPadding);
                 panel1.Height += menuPadding * 2;
+
+                // a tool strip only aligns items left or right, so to put the logo in the middle of the bar
+                // it is a left item, pushed along by its left margin to where the middle is
+                MenuArduPilot.Alignment = ToolStripItemAlignment.Left;
+                MainMenu.Layout += (sender, e) =>
+                {
+                    // where the logo's slot would start with no margin, from the items before it, and where
+                    // the items on the right begin, neither of which depend on the logo's own margin
+                    var slot = MainMenu.Padding.Left;
+                    var limit = MainMenu.Width;
+                    foreach (ToolStripItem item in MainMenu.Items)
+                    {
+                        if (item == MenuArduPilot || !item.Visible)
+                            continue;
+
+                        if (item.Alignment == ToolStripItemAlignment.Left)
+                            slot = Math.Max(slot, item.Bounds.Right + item.Margin.Right);
+                        else if (item.Bounds.Width > 0)
+                            limit = Math.Min(limit, item.Bounds.Left - item.Margin.Left);
+                    }
+
+                    var left = Math.Max(0, Math.Min((MainMenu.Width - MenuArduPilot.Width) / 2,
+                        limit - MenuArduPilot.Width) - slot);
+                    if (left != MenuArduPilot.Margin.Left)
+                        MenuArduPilot.Margin = new Padding(left, MenuArduPilot.Margin.Top, 0,
+                            MenuArduPilot.Margin.Bottom);
+                };
             }
             else
             {
