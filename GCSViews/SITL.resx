@@ -2007,10 +2007,10 @@
     <value>NoControl</value>
   </data>
   <data name="but_swarmrover.Location" type="System.Drawing.Point, System.Drawing">
-    <value>294, 44</value>
+    <value>522, 44</value>
   </data>
   <data name="but_swarmrover.Size" type="System.Drawing.Size, System.Drawing">
-    <value>89, 23</value>
+    <value>165, 23</value>
   </data>
   <data name="but_swarmrover.TabIndex" type="System.Int32, mscorlib">
     <value>14</value>
@@ -2034,10 +2034,10 @@
     <value>NoControl</value>
   </data>
   <data name="but_swarmplane.Location" type="System.Drawing.Point, System.Drawing">
-    <value>199, 44</value>
+    <value>351, 44</value>
   </data>
   <data name="but_swarmplane.Size" type="System.Drawing.Size, System.Drawing">
-    <value>89, 23</value>
+    <value>165, 23</value>
   </data>
   <data name="but_swarmplane.TabIndex" type="System.Int32, mscorlib">
     <value>13</value>
@@ -2064,7 +2064,7 @@
     <value>9, 44</value>
   </data>
   <data name="but_swarmseq.Size" type="System.Drawing.Size, System.Drawing">
-    <value>89, 23</value>
+    <value>165, 23</value>
   </data>
   <data name="but_swarmseq.TabIndex" type="System.Int32, mscorlib">
     <value>10</value>
@@ -2085,10 +2085,10 @@
     <value>2</value>
   </data>
   <data name="but_swarmlink.Location" type="System.Drawing.Point, System.Drawing">
-    <value>104, 44</value>
+    <value>180, 44</value>
   </data>
   <data name="but_swarmlink.Size" type="System.Drawing.Size, System.Drawing">
-    <value>89, 23</value>
+    <value>165, 23</value>
   </data>
   <data name="but_swarmlink.TabIndex" type="System.Int32, mscorlib">
     <value>11</value>
