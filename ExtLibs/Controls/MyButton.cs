@@ -11,6 +11,18 @@ using System.Drawing.Drawing2D;
 
 namespace MissionPlanner.Controls
 {
+    /// <summary>
+    /// The way a <see cref="MyButton"/> chevron points
+    /// </summary>
+    public enum ChevronDirection
+    {
+        None,
+        Down,
+        Up,
+        Left,
+        Right
+    }
+
     public class MyButton : Button
     {
         bool _mouseover = false;
@@ -72,6 +84,20 @@ namespace MissionPlanner.Controls
         [System.ComponentModel.Browsable(true), System.ComponentModel.Category("Appearance")]
         [DefaultValue(4)]
         public int CornerRadius { get; set; } = 4;
+
+        /// <summary>
+        /// A chevron drawn in the text colour over the button, pointing the way given. It is drawn, not
+        /// typed as text, as no font is sure to have an arrow glyph
+        /// </summary>
+        [System.ComponentModel.Browsable(true), System.ComponentModel.Category("Appearance")]
+        [DefaultValue(ChevronDirection.None)]
+        public ChevronDirection Chevron
+        {
+            get { return _chevron; }
+            set { _chevron = value; this.Invalidate(); }
+        }
+
+        ChevronDirection _chevron;
 
         static GraphicsPath RoundedRect(RectangleF rect, float radius)
         {
@@ -167,6 +193,41 @@ namespace MissionPlanner.Controls
 
                 using (SolidBrush mybrush = new SolidBrush(this.Enabled ? TextColor : TextColorNotEnabled))
                     gr.DrawString(display, this.Font, mybrush, outside, stringFormat);
+
+                if (Chevron != ChevronDirection.None)
+                {
+                    float span = Math.Min(this.Width, this.Height) * 0.55f;
+                    float depth = span / 2f;
+                    float cx = this.Width / 2f;
+                    float cy = this.Height / 2f;
+                    PointF[] points;
+
+                    switch (Chevron)
+                    {
+                        case ChevronDirection.Up:
+                            points = new[] {new PointF(cx - span / 2f, cy + depth / 2f), new PointF(cx, cy - depth / 2f), new PointF(cx + span / 2f, cy + depth / 2f)};
+                            break;
+                        case ChevronDirection.Left:
+                            points = new[] {new PointF(cx + depth / 2f, cy - span / 2f), new PointF(cx - depth / 2f, cy), new PointF(cx + depth / 2f, cy + span / 2f)};
+                            break;
+                        case ChevronDirection.Right:
+                            points = new[] {new PointF(cx - depth / 2f, cy - span / 2f), new PointF(cx + depth / 2f, cy), new PointF(cx - depth / 2f, cy + span / 2f)};
+                            break;
+                        default:
+                            points = new[] {new PointF(cx - span / 2f, cy - depth / 2f), new PointF(cx, cy + depth / 2f), new PointF(cx + span / 2f, cy - depth / 2f)};
+                            break;
+                    }
+
+                    using (GraphicsPath chevron = new GraphicsPath())
+                    using (Pen pen = new Pen(this.Enabled ? TextColor : TextColorNotEnabled, 2f))
+                    {
+                        pen.StartCap = LineCap.Round;
+                        pen.EndCap = LineCap.Round;
+                        pen.LineJoin = LineJoin.Round;
+                        chevron.AddLines(points);
+                        gr.DrawPath(pen, chevron);
+                    }
+                }
             }
             catch { }
 

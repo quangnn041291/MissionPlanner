@@ -758,7 +758,7 @@ format with no scaling</value>
     <value>2</value>
   </data>
   <data name="but_collapse.Text" xml:space="preserve">
-    <value>&lt;</value>
+    <value></value>
   </data>
   <data name="&gt;&gt;but_collapse.Name" xml:space="preserve">
     <value>but_collapse</value>

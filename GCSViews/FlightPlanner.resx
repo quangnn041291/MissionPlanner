@@ -761,7 +761,7 @@
     <value>55</value>
   </data>
   <data name="but_mincommands.Text" xml:space="preserve">
-    <value>▾</value>
+    <value></value>
   </data>
   <data name="&gt;&gt;but_mincommands.Name" xml:space="preserve">
     <value>but_mincommands</value>

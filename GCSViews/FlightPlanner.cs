@@ -70,12 +70,12 @@ namespace MissionPlanner.GCSViews
             if (panelWaypoints.Height <= 30)
             {
                 panelWaypoints.Height = 166;
-                but_mincommands.Text = @"▾";
+                but_mincommands.Chevron = MissionPlanner.Controls.ChevronDirection.Down;
             }
             else
             {
                 panelWaypoints.Height = but_mincommands.Height;
-                but_mincommands.Text = @"▴";
+                but_mincommands.Chevron = MissionPlanner.Controls.ChevronDirection.Up;
             }
         }
 

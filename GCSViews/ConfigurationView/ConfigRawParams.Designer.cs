@@ -313,6 +313,8 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             // 
             resources.ApplyResources(this.but_collapse, "but_collapse");
             this.but_collapse.Name = "but_collapse";
+            this.but_collapse.Chevron = MissionPlanner.Controls.ChevronDirection.Left;
+            this.but_collapse.Tag = "subtle";
             this.but_collapse.TextColorNotEnabled = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(87)))), ((int)(((byte)(4)))));
             this.but_collapse.UseVisualStyleBackColor = true;
             this.but_collapse.Click += new System.EventHandler(this.but_collapse_Click);

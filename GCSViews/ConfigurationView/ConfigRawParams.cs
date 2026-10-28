@@ -83,7 +83,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
             splitContainer1.SplitterDistance = Settings.Instance.GetInt32("rawparam_splitterdistance", 180);
             splitContainer1.Panel1Collapsed = Settings.Instance.GetBoolean("rawparam_panel1collapsed", false);
-            but_collapse.Text = splitContainer1.Panel1Collapsed ? ">" : "<";
+            but_collapse.Chevron = splitContainer1.Panel1Collapsed ? MissionPlanner.Controls.ChevronDirection.Right : MissionPlanner.Controls.ChevronDirection.Left;
 
             processToScreen();
 
@@ -1138,13 +1138,13 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             if (splitContainer1.Panel1Collapsed)
             {
-                but_collapse.Text = "<";
+                but_collapse.Chevron = MissionPlanner.Controls.ChevronDirection.Left;
                 splitContainer1.Panel1Collapsed = false;
                 BuildTree();
             }
             else
             {
-                but_collapse.Text = ">";
+                but_collapse.Chevron = MissionPlanner.Controls.ChevronDirection.Right;
                 splitContainer1.Panel1Collapsed = true;
                 filterPrefix = "";
                 FilterTimerOnElapsed(null, null);
